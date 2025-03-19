@@ -47,8 +47,16 @@ php artisan vendor:publish --tag="iss-satellite-config"
 ## Package Usage
 
 ```php
-// Mega
-$megaConnection = Nave\IssSatellite::megaConnection()->select('select * from EXAMPLE');
+// Mega direct DB Connection
+$query = Nave\Mega::connection()->select('select * from EXAMPLE');
+
+// Mega specific functions
+$data = [
+    'cto_in_codigo' => 123,
+    'document' => '123.123.123-12',
+    'agn_st_nome' => 'João da Silva',
+]
+$query = Nave\Mega::clientesSac($data);
 ```
 
 ## Changelog
