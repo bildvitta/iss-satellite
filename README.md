@@ -7,14 +7,13 @@
 
 This package allows Nave Servers to connect with this external services:
 - Mega
-- WSCarteiras
+- WSCarteira
 - Finnet
 
-## Requirement: OCI8
-This package requires Oracle Instant Client oci8 PHP extension installed on your server
+## Requirement: Oracle Instant Client + OCI8 PHP extension
+This package requires Oracle Instant Client oci8 PHP extension installed on your server for Mega operations
 ### php:8.X-fpm Dockerfile
 ```Dockerfile
-# Install Oracle Instant Client
 ENV ORACLE_HOME=/opt/oracle/instantclient_21_13
 ENV LD_LIBRARY_PATH=$ORACLE_HOME
 ENV PATH=$ORACLE_HOME:$PATH
@@ -28,6 +27,14 @@ RUN mkdir -p /opt/oracle && \
     ldconfig
 RUN docker-php-ext-configure oci8 --with-oci8=instantclient,$ORACLE_HOME && \
     docker-php-ext-install oci8
+```
+
+## Requirement: Soap PHP extension
+This package requires Soap PHP extension installed on your server for WSCarteira operations
+### php:8.X-fpm Dockerfile
+```Dockerfile
+RUN apt-get update && apt-get install -y libxml2-dev \
+    && docker-php-ext-install soap
 ```
 
 ## Package Installation

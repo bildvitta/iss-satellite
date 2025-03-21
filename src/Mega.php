@@ -6,6 +6,16 @@ use Illuminate\Support\Facades\DB;
 
 class Mega
 {
+    /**
+     * NÃO IMPLEMENTADOS
+     * getVizinhosByCodUnidade() - Não é Mega, manipula dados do banco do SYS
+     * contratoByCtoInCodigo() - Alias de buscaDadosUnidade
+     * ecommerce() - Utiliza banco SYS
+     * getTelefonesByAgnCodigo() - Utiliza ORM rudimentar do Mega que fizeram, ver se vai importar
+     * insertTelefones() - Utiliza ORM rudimentar do Mega que fizeram, ver se vai importar
+     * sincronizaPermutantes() - Rotina de buscar no Mega por permutantes e inserir no SYS. Utiliza uma query Mega no início mas o restante é SYS
+     */
+
     static protected function connectionConfig()
     {
         config([
@@ -201,16 +211,6 @@ class Mega
             where cod_contrato = :cto_in_codigo";
         return self::connection()->select($query, $data);
     }
-
-    /**
-     * NÃO IMPLEMENTADO - Não é Mega
-     * API SYS MegaController::getVizinhosByCodUnidade
-     */
-
-    /**
-     * NÃO IMPLEMENTADO - Alias de buscaDadosUnidade
-     * API SYS MegaController::contratoByCtoInCodigo
-     */
 
     /**
      * NÃO TESTADO
@@ -584,11 +584,6 @@ class Mega
     }
 
     /**
-     * NÃO IMPLEMENTADO - Utiliza banco SYS
-     * API SYS MegaController::ecommerce
-     */
-
-    /**
      * NÃO TESTADO
      * 
      * @return array
@@ -656,16 +651,6 @@ class Mega
     }
 
     /**
-     * NÃO IMPLEMENTADO - Utiliza ORM rudimentar do Mega, ver se vai importar
-     * API SYS MegaController::getTelefonesByAgnCodigo
-     */
-
-    /**
-     * NÃO IMPLEMENTADO - Utiliza ORM rudimentar do Mega, ver se vai importar
-     * API SYS MegaController::insertTelefones
-     */
-
-     /**
      * NÃO TESTADO
      * 
      * @return array
@@ -885,9 +870,4 @@ class Mega
 
         return self::connection()->select($query, $data);
     }
-
-    /**
-     * NÃO IMPLEMENTADO - Rotina de buscar no Mega por permutantes e inserir no SYS
-     * API SYS MegaController::sincronizaPermutantes
-     */
 }

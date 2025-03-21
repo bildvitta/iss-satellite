@@ -23,4 +23,9 @@ return [
             'max_name_len'   => env('MS_SATELLITE_MEGA_ORA_MAX_NAME_LEN', 30),
         ],
     ],
+    'wscarteira' => [
+        'wsdl' => env('MS_SATELLITE_WSCARTEIRA_WSDL', ''),
+        'login' => env('MS_SATELLITE_WSCARTEIRA_LOGIN', ''),
+        'password' => env('MS_SATELLITE_WSCARTEIRA_PASSWORD', ''),
+    ],
 ];
