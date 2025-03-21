@@ -10,7 +10,6 @@ return [
             'port'           => env('MS_SATELLITE_MEGA_DB_PORT', '1521'),
             'database'       => env('MS_SATELLITE_MEGA_DB_DATABASE', ''),
             'service_name'   => env('MS_SATELLITE_MEGA_DB_DATABASE', ''),
-            // 'service_name'   => env('MS_SATELLITE_MEGA_DB_SERVICE_NAME', ''),
             'username'       => env('MS_SATELLITE_MEGA_DB_USERNAME', ''),
             'password'       => env('MS_SATELLITE_MEGA_DB_PASSWORD', ''),
             'charset'        => env('MS_SATELLITE_MEGA_DB_CHARSET', 'AL32UTF8'),
