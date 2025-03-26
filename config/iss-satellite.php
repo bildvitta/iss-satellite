@@ -27,4 +27,8 @@ return [
         'login' => env('MS_SATELLITE_WSCARTEIRA_LOGIN', ''),
         'password' => env('MS_SATELLITE_WSCARTEIRA_PASSWORD', ''),
     ],
+    'finnet' => [
+        'url' => env('MS_SATELLITE_FINNET_URL', ''),
+        'url_qrcode' => env('MS_SATELLITE_FINNET_URL_QRCODE', ''),
+    ],
 ];

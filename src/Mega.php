@@ -870,4 +870,47 @@ class Mega
 
         return self::connection()->select($query, $data);
     }
+
+    /**
+     * NÃO TESTADO
+     * 
+     * @return array
+     */
+    static public function listarParcelasGeradasMegaFinnet($id_venda = null, $num_parcela = null, $base64 = false, $PROP_IN_SEQUENCIA = null, $api = null): array
+	{
+        /* MOSTRAR E NÃO MOSTRAR A COLUNA DO BASE 64 */
+        $coluna_base64  = ($base64) ? 'P.BOLETOBASE64, ' : NULL;
+
+        $sql_Where = $api ? 'WHERE P.STATUS >= 0' : "WHERE P.STATUS <> 80";
+        $sql_Where .= ($id_venda)    && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_CODIGO    =  {$id_venda}           " : NULL;
+        $sql_Where .= ($num_parcela) && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_PARCELA   =  {$num_parcela}        " : NULL;
+        $sql_Where .= ($PROP_IN_SEQUENCIA)                        ? " AND P.PROP_IN_SEQUENCIA =  {$PROP_IN_SEQUENCIA}  " : NULL;
+
+        $query = "SELECT 
+                    {$coluna_base64}
+                    P.PROP_IN_CODIGO,
+                    P.DOCUMENTO,
+                    P.EST_IN_CODIGO,
+                    P.PROP_VENCTO,
+                    P.VLR_PARCELA,
+                    P.NOSSONUMERO,
+                    P.VALOR_BAIXA,
+                    P.DATA_BAIXA,
+                    P.STATUS,
+                    P.JSONPAR,
+                    P.PROP_IN_PARCELA,
+                    P.RET_STATUS,
+                    P.RET_MENSAGEM,
+                    TO_CHAR(P.DATA_BAIXA, 'YYYY-MM-DD') AS DATA_BAIXA_FORMATO_EN,
+                    TO_CHAR(P.DATA_CREDITO, 'YYYY-MM-DD') AS DATA_CREDITO_FORMATO_EN,
+                    TO_CHAR(P.PROP_VENCTO,'YYYY-MM-DD') AS PROP_VENCTO_FORMATO_EN,
+                    P.PROP_IN_SEQUENCIA,
+                    P.VLR_PRESTAMISTA,
+                    P.AGNCFI_IN_CODIGO,
+                    P.AGN_CH_BOLETO
+            FROM BILD.CLI_PROPOSTA_SYS  P 
+            {$sql_Where} ";
+        
+        return self::connection()->select($query);
+    }
 }
