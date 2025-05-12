@@ -3,6 +3,7 @@
 namespace Nave\IssSatellite;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Query\Builder;
 
 class Mega
 {
@@ -27,6 +28,15 @@ class Mega
     {
         self::connectionConfig();
         return DB::connection('iss-satellite-mega');
+    }
+
+    /**
+     * Retorna a query das vendas permutantes
+     */
+    static public function getPermutationSalesQuery(): Builder
+    {
+        return self::connection()->table('bild.vw_bld_ono_parc_cli_sys_api')
+            ->orderBy('cod_contrato', 'desc');
     }
 
     /**
