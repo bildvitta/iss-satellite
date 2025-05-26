@@ -2,8 +2,9 @@
 
 namespace Nave\IssSatellite;
 
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 
 class Mega
 {
@@ -16,39 +17,117 @@ class Mega
      * insertTelefones() - Utiliza ORM rudimentar do Mega que fizeram, ver se vai importar
      * sincronizaPermutantes() - Rotina de buscar no Mega por permutantes e inserir no SYS. Utiliza uma query Mega no início mas o restante é SYS
      */
-
-    static protected function connectionConfig()
+    protected static function connectionConfig()
     {
         config([
             'database.connections.iss-satellite-mega' => config('iss-satellite.mega.db'),
         ]);
     }
 
-    static public function connection(): \Illuminate\Database\Connection
+    public static function connection(): \Illuminate\Database\Connection
     {
         self::connectionConfig();
+
         return DB::connection('iss-satellite-mega');
     }
 
     /**
      * Retorna a query das vendas permutantes
      */
-    static public function getPermutationSalesQuery(): Builder
+    public static function getPermutationSalesQuery(): Builder
     {
         return self::connection()->table('bild.vw_bld_ono_parc_cli_sys_api')
             ->orderBy('cod_contrato', 'desc');
     }
 
     /**
+     * Retorna todo o fluxo de pagamento de uma data base, CPF/CNPJ e empreendimento
+     *
+     * $data deve conter os seguintes campos:
+     * - data_base: Data base no formato 'd/m/Y' (opcional, se não for passado, será utilizado a data atual)
+     * - est_in_codigo: Código do empreendimento (opcional, se não for passado, será considerado '0')
+     * - document: CPF ou CNPJ do cliente (opcional, se não for passado, será considerado '0') passar ele formatado com máscara, ex: 123.456.789-00 ou 12.345.678/0001-00
+     */
+    public static function getFinancialStatementBaseDate(array $data): array
+    {
+        $data_base = "to_date(:data_base, 'dd/mm/yyyy') - 1";
+
+        $query = "
+            select vbo.org_in_codigo,
+                vbo.cto_in_codigo,
+                vbo.cto_ch_status,
+                vbo.codigo_exporta,
+                vbo.documento,
+                vbo.cto_dt_cadastro,
+                vbo.cto_re_valorcontrato,
+                vbo.cto_re_valorcontrato_ori,
+                vbo.par_ch_parcela,
+                vbo.par_ch_receita,
+                vbo.par_in_codigo,
+                vbo.par_re_valororiginal,
+                vbo.par_dt_vencimento,
+                vbo.par_dt_baixa,
+                vbo.sequencia,
+                vbo.par_ch_status,
+                vbo.par_dt_movimento
+            from bild.vw_bld_ono_parcela_sys_api vbo,
+                (
+                    select distinct
+                        cpa.org_tab_in_codigo_new  as org_tab_in_codigo,
+                        cpa.org_pad_in_codigo_new  as org_pad_in_codigo,
+                        cpa.org_in_codigo_new      as org_in_codigo,
+                        cpa.org_tau_st_codigo_new  as org_tau_st_codigo,
+                        cpa.cto_in_codigo_new      as cto_in_codigo,
+                        cpa.par_in_codigo_new      as par_in_codigo,
+                        'S'                        as parcela_alterada
+                    from
+                        bild.a#car_parcela   cpa,
+                        bild.adt_ocorrencia  aoc
+                    where cpa.ado_in_ocorrencia = aoc.ado_in_ocorrencia
+                    and aoc.ado_ch_operacao       in ('I','U')
+                    and trunc(aoc.ado_dt_inclusao) = ".$data_base.'
+                )  qry_par
+            where vbo.org_tab_in_codigo = qry_par.org_tab_in_codigo (+)
+            and vbo.org_pad_in_codigo = qry_par.org_pad_in_codigo (+)
+            and vbo.org_in_codigo     = qry_par.org_in_codigo     (+)
+            and vbo.org_tau_st_codigo = qry_par.org_tau_st_codigo (+)
+            and vbo.cto_in_codigo     = qry_par.cto_in_codigo     (+)
+            and vbo.par_in_codigo     = qry_par.par_in_codigo     (+)
+        ';
+
+        if (! array_key_exists('data_base', $data)) {
+            $data_base = date('Y-m-d');
+            $data_base = Carbon::parse($data_base)->format('d/m/Y');
+            $data['data_base'] = $data_base;
+        }
+
+        if (array_key_exists('est_in_codigo', $data) && $data['est_in_codigo'] != '0') {
+            $query .= 'and vbo.codigo_exporta = :est_in_codigo ';
+        }
+
+        if (array_key_exists('document', $data) && ($data['document'] != '0')) {
+            $query .= 'and documento = :document ';
+        }
+
+        if (
+            (array_key_exists('document', $data) && ($data['document'] == '0'))
+            && (array_key_exists('est_in_codigo', $data) && ($data['est_in_codigo'] == '0'))
+        ) {
+            $query .= " and (nvl(qry_par.parcela_alterada, 'N') = 'S' or trunc(vbo.cto_dt_status) = ".$data_base.')';
+        }
+
+        return self::connection()->select($query, $data);
+    }
+
+    /**
      * NÃO TESTADO
      * Função que atualiza os dados do cliente
-     * 
-     * @param array $data
-     * @return int
+     *
+     * @param  array  $data
      */
-    static public function atualizaDadosCliente($data): int
+    public static function atualizaDadosCliente($data): int
     {
-        $query = " update bild.glo_agentes t
+        $query = ' update bild.glo_agentes t
                     set t.agn_st_nome        = :agn_st_nome,
                         t.agn_st_logradouro  = :agn_st_logradouro,
                         t.agn_st_numero      = :agn_st_numero,
@@ -59,26 +138,22 @@ class Mega
                         t.agn_st_email       = :agn_st_email
                 where t.agn_in_codigo     = :agn_in_codigo
                     and t.agn_pad_in_codigo = :agn_pad_in_codigo
-                    and t.agn_tab_in_codigo = :agn_tab_in_codigo";
+                    and t.agn_tab_in_codigo = :agn_tab_in_codigo';
+
         return self::connection()->update($query, $data);
     }
 
-    /**
-     * 
-     * @return array
-     */
-    static public function getEstadosCivis(): array
+    public static function getEstadosCivis(): array
     {
         $query = 'select * from bild.glo_estadocivil';
+
         return self::connection()->select($query);
     }
 
     /**
      * Função que pega os dados do cliente pelo cpf/cnpj
-     * 
-     * @return array
      */
-    static public function clientes($data): array
+    public static function clientes($data): array
     {
         $query = "select CTO_IN_CODIGO,
                     AGN_TAB_IN_CODIGO,
@@ -111,16 +186,14 @@ class Mega
             WHERE AGN_ST_CPF = ':document'
                     OR CNPJ = ':document'
                     AND rownum = 1";
+
         return self::connection()->select($query, $data);
     }
 
     /**
-     * 
      * Função que pega os dados do cliente pelo cto_in_codigo
-     * 
-     * @return array
      */
-    static public function clienteByCtoInCodigo($data): array
+    public static function clienteByCtoInCodigo($data): array
     {
         $query = "select CTO_IN_CODIGO,
                     AGN_TAB_IN_CODIGO,
@@ -152,17 +225,16 @@ class Mega
             from  bild.vw_bld_bca_cto_cli_api 
             WHERE CTO_IN_CODIGO = ':cto_in_codigo'
                     AND rownum = 1";
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * Função que pega os dados do cliente pelo cpf/cnpj ou pelo nome
-     * 
-     * @return array
      */
-    static public function clientesSac($data): array
+    public static function clientesSac($data): array
     {
-        $query = "select CTO_IN_CODIGO,
+        $query = 'select CTO_IN_CODIGO,
                     AGN_TAB_IN_CODIGO,
                     AGN_PAD_IN_CODIGO,
                     AGN_IN_CODIGO,
@@ -189,18 +261,18 @@ class Mega
                     AGN_ST_CPF_CONJUGE,
                     AGN_ST_RG_CONJUGE,
                     AGN_ST_NACIONALIDADE
-            from  bild.vw_bld_bca_cto_cli_api ";
-        if (!empty($data['document']) && empty($data['agn_st_nome'])) {
+            from  bild.vw_bld_bca_cto_cli_api ';
+        if (! empty($data['document']) && empty($data['agn_st_nome'])) {
             $query .= "WHERE AGN_ST_CPF = ':document'
                         OR CNPJ = ':document'";
-        } elseif (empty($data['document']) && !empty($data['agn_st_nome'])) {
+        } elseif (empty($data['document']) && ! empty($data['agn_st_nome'])) {
             $query .= "WHERE AGN_ST_NOME like ':agn_st_nome'";
         } else {
             $query .= "WHERE AGN_ST_CPF = ':document'
                         OR CNPJ = ':document'
                         AND AGN_ST_NOME like ':agn_st_nome'";
         }
-            
+
         $customers = self::connection()->select($query, $data);
 
         foreach ($customers as $customer) {
@@ -212,164 +284,97 @@ class Mega
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function getEntregaDeChaveByCtoInCodigo($data): array
+    public static function getEntregaDeChaveByCtoInCodigo($data): array
     {
-        $query = "select * from bild.vw_bld_ono_contr_ocor_sys_api
-            where cod_contrato = :cto_in_codigo";
+        $query = 'select * from bild.vw_bld_ono_contr_ocor_sys_api
+            where cod_contrato = :cto_in_codigo';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function buscaDadosUnidade($data): array
+    public static function buscaDadosUnidade($data): array
     {
-        $query = "select *
+        $query = 'select *
                     from bild.vw_bld_ono_contrato_sys_api
-                where cto_in_codigo = :cto_in_codigo";
+                where cto_in_codigo = :cto_in_codigo';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function contratos($data): array
+    public static function contratos($data): array
     {
-        $query = "select *
+        $query = 'select *
                 from bild.vw_bld_ono_contrato_sys_api
-            where agn_in_codigo = :agn_in_codigo";
+            where agn_in_codigo = :agn_in_codigo';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
      * Traz os status do boleto de sinal
-     * 
-     * @return array
      */
-    static public function statusBoletoSinal($data): array
+    public static function statusBoletoSinal($data): array
     {
-        $query = "select t.*
+        $query = 'select t.*
                 from bild.alx_viw_bldbolrapido t
-                where t.agn_in_codigo = :agn_in_codigo";
+                where t.agn_in_codigo = :agn_in_codigo';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
      * Traz o extrato do cliente, mesma table de extratoFinanceiro, porém essa não traz duplicado
-     * 
-     * @return array
      */
-    static public function sacExtratoCliente($data): array
+    public static function sacExtratoCliente($data): array
     {
-        $query = "select *
+        $query = 'select *
                 from bild.vw_bld_ono_flu_cli_rep_sys_api
-                where codigo_contrato_mega = :cto_in_codigo";
+                where codigo_contrato_mega = :cto_in_codigo';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * Lista todos os empreendimentos
-     * 
-     * @return array
      */
-    static public function empreendimentos(): array
+    public static function empreendimentos(): array
     {
-        $query = "select *
-                from bild.vw_bld_ono_est_emp_sys_api";
+        $query = 'select *
+                from bild.vw_bld_ono_est_emp_sys_api';
+
         return self::connection()->select($query);
     }
 
     /**
      * NÃO TESTADO
      * Mostra todo o fluxo financeiro do contrato
-     * 
-     * @return array
      */
-    static public function extratoFinanceiro($data): array
+    public static function extratoFinanceiro($data): array
     {
         $data['date'] = date('Y-m-d');
         $$data['seq'] = 1;
 
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldapp.fnc_bld_app_parcela (:organizacao
             , :cto_in_codigo
             , :sequencia
             , :data_base);
-            end;";
+            end;';
 
         self::connection()->select($query, $data);
 
-        $query = "select t.* from bild.alx_clitmpcontratos t
+        $query = 'select t.* from bild.alx_clitmpcontratos t
                 where t.org_in_codigo = :organizacao and
-                t.cto_in_codigo = :cto_in_codigo and t.seq_in_codigo = :sequencia";
-
-        return self::connection()->select($query, $data);
-    }
-
-    /**
-     * NÃO TESTADO
-     * Mostra todo o fluxo financeiro do contrato
-     * 
-     * @return array
-     */
-    static public function extratoFinanceiroDataBase($data): array
-    {
-        $query = "select vbo.org_in_codigo
-                    , vbo.cto_in_codigo
-                    , vbo.cto_ch_status
-                    , vbo.codigo_exporta
-                    , vbo.documento
-                    , vbo.cto_dt_cadastro
-                    , vbo.cto_re_valorcontrato
-                    , vbo.cto_re_valorcontrato_ori
-                    , vbo.par_ch_parcela
-                    , vbo.par_ch_receita
-                    , vbo.par_in_codigo
-                    , vbo.par_re_valororiginal
-                    , vbo.par_dt_vencimento
-                    , vbo.par_dt_baixa
-                    , vbo.sequencia
-                    , vbo.par_ch_status
-                    , vbo.par_dt_movimento
-                from bild.vw_bld_ono_parcela_sys_api                             vbo
-                    , (select distinct
-                            cpa.org_tab_in_codigo_new  as org_tab_in_codigo
-                            , cpa.org_pad_in_codigo_new  as org_pad_in_codigo
-                            , cpa.org_in_codigo_new      as org_in_codigo
-                            , cpa.org_tau_st_codigo_new  as org_tau_st_codigo
-                            , cpa.cto_in_codigo_new      as cto_in_codigo
-                            , cpa.par_in_codigo_new      as par_in_codigo
-                            , 'S'                        as parcela_alterada
-                        from bild.a#car_parcela   cpa
-                            , bild.adt_ocorrencia  aoc
-                        where cpa.ado_in_ocorrencia = aoc.ado_in_ocorrencia
-                        and aoc.ado_ch_operacao       in ('I','U')
-                        and trunc(aoc.ado_dt_inclusao) = to_date(':data_base', 'dd/mm/yyyy') - 1)  qry_par
-                where vbo.org_tab_in_codigo = qry_par.org_tab_in_codigo (+)
-                and vbo.org_pad_in_codigo = qry_par.org_pad_in_codigo (+)
-                and vbo.org_in_codigo     = qry_par.org_in_codigo     (+)
-                and vbo.org_tau_st_codigo = qry_par.org_tau_st_codigo (+)
-                and vbo.cto_in_codigo     = qry_par.cto_in_codigo     (+)
-                and vbo.par_in_codigo     = qry_par.par_in_codigo     (+)";
-        
-        if ($data['est_in_codigo'] != '0') {
-            $query .= "and vbo.codigo_exporta = :est_in_codigo ";
-        }
-        if ($data['cpf_cnpj'] != '0') {
-            $query .=  "and documento = ':cpf_cnpj' ";
-        }
-        if (($data['cpf_cnpj'] == '0') && ($data['est_in_codigo'] == '0')) {
-            $query .= " and (nvl(qry_par.parcela_alterada, 'N') = 'S' or trunc(vbo.cto_dt_status) = :data_base - 1)";
-        }
+                t.cto_in_codigo = :cto_in_codigo and t.seq_in_codigo = :sequencia';
 
         return self::connection()->select($query, $data);
     }
@@ -377,55 +382,51 @@ class Mega
     /**
      * NÃO TESTADO
      * Retorno a lista de boletos com linha digitavel (liberado pelo financeiro)
-     * 
-     * @return array
      */
-    static public function boletos($data): array
+    public static function boletos($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldapp.fnc_bld_app_parcela (:organizacao
             , :cto_in_codigo
             , :sequencia
             , :data_base);
-            end;";
+            end;';
         self::connection()->select($query, $data);
 
-        $query = "select t.* from bild.alx_clitmpcontratos t
+        $query = 'select t.* from bild.alx_clitmpcontratos t
                 where t.org_in_codigo = :org_in_codigo
                 and t.cto_in_codigo = :cto_in_codigo
                 and t.seq_in_codigo = :sequencia
-                and t.par_st_linhadigitavel is not null";
+                and t.par_st_linhadigitavel is not null';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function usuarios($data): array
+    public static function usuarios($data): array
     {
         $pResult = '';
 
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisharepoint.p_busca_usuario (:pResult
                 , :pCod
                 , :pNome
                 , :pTipo);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function insereUsuario($data): array
+    public static function insereUsuario($data): array
     {
         $pResult = '';
 
-        $query = " begin
+        $query = ' begin
             bild.alx_pck_bldallapisharepoint.p_insere_usuario_mega (:plogin
                 , :pnome
                 , :pemail
@@ -435,132 +436,121 @@ class Mega
                 , :pcopia_org
                 , :pcopia_mat
                 , :pcopia_grupos);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function spes($data): array
+    public static function spes($data): array
     {
         $pResult = '';
 
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisharepoint.p_busca_spe (:pResult
                 , :pTexto
                 , :pCod
                 , :pTipo);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function spesUsuarios($data): array
+    public static function spesUsuarios($data): array
     {
         $pResult = '';
 
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisharepoint.p_busca_spe_usuario (:pResult
                     , :pOperacao
                     , :pUsuario);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function perfilUsuario($pUsuario): array
+    public static function perfilUsuario($pUsuario): array
     {
-        $query = " begin
+        $query = ' begin
                 bild.alx_pck_bldallapisharepoint.p_busca_perfil_usuario (:pResult
                     , :pUsuario);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function inclusaoAlcada($data): array
+    public static function inclusaoAlcada($data): array
     {
-        $query = " begin
+        $query = ' begin
                 bild.alx_pck_bldallapisharepoint.p_busca_spe_inclusao_alcada (:pResult
                     , :pUsuario);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function alcadaUsuario($data): array
+    public static function alcadaUsuario($data): array
     {
         $pResult = '';
 
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisharepoint.p_busca_alcada_usuario (:pResult
                 , :pUsuario);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function insereSpeUsuario($data): array
+    public static function insereSpeUsuario($data): array
     {
-        $query = "begin
+        $query = 'begin
                     bild.alx_pck_bldallapisharepoint.p_insere_spe_usuario (:pUsuario
                     , :pOrg_tab
                     , :pOrg_pad
                     , :pFil_Cod
                     , :pOrg_tau
                     , :pPerfil);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function deleteSpeUsuario($data): array
+    public static function deleteSpeUsuario($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisharepoint.p_deleta_spe_usuario (:pUsuario
                 , :pFil_Cod);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function atualizaAlcadaUsuario($data): array
+    public static function atualizaAlcadaUsuario($data): array
     {
-        $query = "begin
+        $query = 'begin
                 bild.alx_pck_bldallapisharepoint.p_atualiza_alcada_usuario (:pUsuario
                     , :pOrg_tab
                     , :pOrg_pad
@@ -571,101 +561,92 @@ class Mega
                     , :pNivel_2
                     , :pNivel_3
                     , :pEstouro);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function deletaAlcadaUsuario($data): array
+    public static function deletaAlcadaUsuario($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisharepoint.p_deleta_alcada_usuario (:pUsuario
                 , :pOrg_tab
                 , :pOrg_pad
                 , :pOrg_cod
                 , :pOrg_tau
                 , :pFil_cod);
-            end;";
+            end;';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function clientesPorTelefone($data): array
+    public static function clientesPorTelefone($data): array
     {
         $query = "select * from bild.vw_bld_ono_cli_contr_sys_api
             where celular =':phone'";
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function torresPorEmpreendimento($data): array
+    public static function torresPorEmpreendimento($data): array
     {
-        $query = "select * from bild.dbm_vw_estrutura e where e.emp_codigo = :realEstateDevelopmentId ";
+        $query = 'select * from bild.dbm_vw_estrutura e where e.emp_codigo = :realEstateDevelopmentId ';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function torresPorUnidade($data): array
+    public static function torresPorUnidade($data): array
     {
-        $query = "select * from bild.dbm_vw_estrutura e
-                where e.und_codigo = :unitId ";
+        $query = 'select * from bild.dbm_vw_estrutura e
+                where e.und_codigo = :unitId ';
+
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function buscaPedidosSuprimentos($data): array
+    public static function buscaPedidosSuprimentos($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisuprimentos.p_busca_pedidos (:pResult
                 , :pDocumento
                 , :pData_ini);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function buscaContratosSuprimentos($data): array
+    public static function buscaContratosSuprimentos($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisuprimentos.p_busca_contratos (:pResult
                 , :pDocumento
                 , :pData_ini);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function fluxoCliente($data): array
+    public static function fluxoCliente($data): array
     {
         $query = "select *
                 from bild.vw_bld_ono_flu_cli_rep_sys_api
@@ -677,30 +658,26 @@ class Mega
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function verificaStatusNF($data): array
+    public static function verificaStatusNF($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldallapisuprimentos.p_verifica_nota (:pREtorno
                 , :pFil_doc
                 , :pFor_doc
                 , :pNota
                 , :pData_Emissao);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function getDadosTermo($data): array
+    public static function getDadosTermo($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldonointegracao.prc_rec_dados_termo (:p_in_cod_exporta
                 , :p_in_tipo_doc
                 , :p_in_cpf_cnpj
@@ -708,19 +685,17 @@ class Mega
                 , :p_in_usuario
                 , :p_in_computador
                 , :p_out_result);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function getDespesaITBI($data): array
+    public static function getDespesaITBI($data): array
     {
-        $query = "begin
+        $query = 'begin
                 bild.alx_pck_bldonointegracao.prc_rec_despesas_itbi (:p_in_cod_exporta
                     , :p_in_tipo_doc
                     , :p_in_cpf_cnpj
@@ -728,38 +703,34 @@ class Mega
                     , :p_in_usuario
                     , :p_in_computador
                     , :p_out_result);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function getFluxoAssociativo($data): array
+    public static function getFluxoAssociativo($data): array
     {
-        $query = "begin
+        $query = 'begin
                 bild.alx_pck_bldonointegracao.prc_rec_status_fluxo_assoc (:p_in_cod_exporta
                     , :p_in_tipo_doc
                     , :p_in_cpf_cnpj
                     , :p_in_usuario
                     , :p_in_computador
                     , :p_out_result);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function atualizaFluxoAssociativo($data): array
+    public static function atualizaFluxoAssociativo($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldonointegracao.prc_atualiz_status_fluxo_assoc (:p_in_cod_exporta
                 , :p_in_tipo_doc
                 , :p_in_cpf_cnpj
@@ -767,19 +738,17 @@ class Mega
                 , :p_in_usuario
                 , :p_in_computador
                 , :p_out_result);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function atualizaDataBancoEscFluxoAssociativo($data): array
+    public static function atualizaDataBancoEscFluxoAssociativo($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldonointegracao.prc_atualiz_datas_fluxo_assoc (:p_in_cod_exporta
                 , :p_in_tipo_doc
                 , :p_in_cpf_cnpj
@@ -788,17 +757,15 @@ class Mega
                 , :p_in_usuario
                 , :p_in_computador
                 , :p_out_result);
-                end;";
+                end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function consultaRM($data): array
+    public static function consultaRM($data): array
     {
         $query = "select *
             from bild.vw_bld_ono_req_mat_sys_api
@@ -811,10 +778,8 @@ class Mega
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function consultaCVV($data): array
+    public static function consultaCVV($data): array
     {
         $query = "select *
             from bild.vw_bld_ono_nota_ap_sys_api
@@ -827,10 +792,8 @@ class Mega
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function getdataAssembleia($data): array
+    public static function getdataAssembleia($data): array
     {
         $query = "select est.fil_in_codigo
                 , est.est_st_nome
@@ -844,12 +807,10 @@ class Mega
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function addContaBancariaCliente($data): array
+    public static function addContaBancariaCliente($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldbcaintegracaosys.prc_bld_bca_insere_cc_cli (
                 p_documento     => :p_documento     -- CPF ou CPNJ do Cliente;
                 , p_est_in_codigo => :p_est_in_codigo -- Código exporta da unidade;
@@ -860,41 +821,37 @@ class Mega
                 , p_titular       => :p_titular
                 , p_cpftitular    => :p_cpftitular
                 , p_cnpjtitular   => :p_cnpjtitular);
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function getContaBancariaCliente($data): array
+    public static function getContaBancariaCliente($data): array
     {
-        $query = "begin
+        $query = 'begin
             bild.alx_pck_bldbcaintegracaosys.prc_bld_bca_rec_cc_cli (p_out_result    => :p_out_result
                 , p_documento     => :p_documento -- CPF ou CPNJ do Cliente;
                 , p_est_in_codigo => :p_est_in_codigo); -- Código exporta da unidade;
-            end;";
+            end;';
 
         return self::connection()->select($query, $data);
     }
 
     /**
      * NÃO TESTADO
-     * 
-     * @return array
      */
-    static public function listarParcelasGeradasMegaFinnet($id_venda = null, $num_parcela = null, $base64 = false, $PROP_IN_SEQUENCIA = null, $api = null): array
-	{
+    public static function listarParcelasGeradasMegaFinnet($id_venda = null, $num_parcela = null, $base64 = false, $PROP_IN_SEQUENCIA = null, $api = null): array
+    {
         /* MOSTRAR E NÃO MOSTRAR A COLUNA DO BASE 64 */
-        $coluna_base64  = ($base64) ? 'P.BOLETOBASE64, ' : NULL;
+        $coluna_base64 = ($base64) ? 'P.BOLETOBASE64, ' : null;
 
-        $sql_Where = $api ? 'WHERE P.STATUS >= 0' : "WHERE P.STATUS <> 80";
-        $sql_Where .= ($id_venda)    && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_CODIGO    =  {$id_venda}           " : NULL;
-        $sql_Where .= ($num_parcela) && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_PARCELA   =  {$num_parcela}        " : NULL;
-        $sql_Where .= ($PROP_IN_SEQUENCIA)                        ? " AND P.PROP_IN_SEQUENCIA =  {$PROP_IN_SEQUENCIA}  " : NULL;
+        $sql_Where = $api ? 'WHERE P.STATUS >= 0' : 'WHERE P.STATUS <> 80';
+        $sql_Where .= ($id_venda) && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_CODIGO    =  {$id_venda}           " : null;
+        $sql_Where .= ($num_parcela) && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_PARCELA   =  {$num_parcela}        " : null;
+        $sql_Where .= ($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_SEQUENCIA =  {$PROP_IN_SEQUENCIA}  " : null;
 
         $query = "SELECT 
                     {$coluna_base64}
@@ -920,7 +877,7 @@ class Mega
                     P.AGN_CH_BOLETO
             FROM BILD.CLI_PROPOSTA_SYS  P 
             {$sql_Where} ";
-        
+
         return self::connection()->select($query);
     }
 }

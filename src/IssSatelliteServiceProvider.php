@@ -2,9 +2,9 @@
 
 namespace Nave\IssSatellite;
 
+use Nave\IssSatellite\Commands\IssSatelliteCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Nave\IssSatellite\Commands\IssSatelliteCommand;
 
 class IssSatelliteServiceProvider extends PackageServiceProvider
 {
@@ -18,8 +18,8 @@ class IssSatelliteServiceProvider extends PackageServiceProvider
         $package
             ->name('iss-satellite')
             ->hasConfigFile();
-            // ->hasViews()
-            // ->hasMigration('create_iss_satellite_table')
-            // ->hasCommand(IssSatelliteCommand::class);
+        // ->hasViews()
+        // ->hasMigration('create_iss_satellite_table')
+        // ->hasCommand(IssSatelliteCommand::class);
     }
 }

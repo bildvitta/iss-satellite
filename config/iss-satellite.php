@@ -23,12 +23,12 @@ return [
         ],
     ],
     'wscarteira' => [
-        'wsdl' => env('MS_SATELLITE_WSCARTEIRA_WSDL', ''),
-        'login' => env('MS_SATELLITE_WSCARTEIRA_LOGIN', ''),
+        'wsdl'     => env('MS_SATELLITE_WSCARTEIRA_WSDL', ''),
+        'login'    => env('MS_SATELLITE_WSCARTEIRA_LOGIN', ''),
         'password' => env('MS_SATELLITE_WSCARTEIRA_PASSWORD', ''),
     ],
     'finnet' => [
-        'url' => env('MS_SATELLITE_FINNET_URL', ''),
+        'url'        => env('MS_SATELLITE_FINNET_URL', ''),
         'url_qrcode' => env('MS_SATELLITE_FINNET_URL_QRCODE', ''),
     ],
 ];
