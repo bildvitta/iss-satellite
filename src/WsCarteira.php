@@ -9,7 +9,6 @@ class WsCarteira
     /**
      * NÃO IMPLEMENTADOS
      * endereco() - Depende de uma classe de cliente específica de la
-     * processarEndereco() - Talvez de para implementar, mas é um complemento da endereco()
      * abreviarBairro() - Não vi sentido, parece igual ao abreviarEndereco()
      * siglaPais() - Utiliza dados de países do banco local, talvez de para utilizar o laravel countries do proprio módulo
      * estruturaParcelaVazia() - Faz mais sentido essa estrutura ser feita no próprio módulo pois as parcelas não vazias já serão montadas la
@@ -254,22 +253,23 @@ class WsCarteira
      * Se o endereço ainda estiver muito grande, remove preposições e artigos.
      * Se o endereço ainda estiver muito grande, abrevia palavras.
      */
-    public static function abbreviateAddress(string $address, int $maxLenght): string
+    public static function abbreviateAddress(string $address, int $maxLength): string
     {
         $address = self::sanitizeString($address);
-        $address = str_replace(' ', '', $address);
+        $address = preg_replace('/_/', '', $address);
+        $address = preg_replace('/\s+/', ' ', $address);
         $address = mb_strtoupper($address);
 
-        if (strlen($address) > $maxLenght) {
+        if (strlen($address) > $maxLength) {
             $address = self::abbreviateAddressPrefix($address);
         }
 
-        if (strlen($address) > $maxLenght) {
+        if (strlen($address) > $maxLength) {
             $address = self::removePrepositions($address);
         }
 
-        if (strlen($address) > $maxLenght) {
-            $address = self::abbreviateText($address, $maxLenght);
+        if (strlen($address) > $maxLength) {
+            $address = self::abbreviateText($address, $maxLength);
         }
 
         return $address;
@@ -282,18 +282,18 @@ class WsCarteira
     public static function getCivilStatusCode(string $civilStatusName): string
     {
         $civilStatuses = [
-            'pessoa Jurídica'                                    => '',
+            'pessoa jurídica'                                    => '',
             'solteiro'                                           => 'S',
-            'casado com comunhão total APÓS lei nº 6.515/77'     => 'C',
-            'casado com comunhão parcial APÓS lei nº 6.515/77'   => 'C',
-            'casado com separação de bens APÓS lei nº 6.515/77'  => 'C',
+            'casado com comunhão total após lei nº 6.515/77'     => 'C',
+            'casado com comunhão parcial após lei nº 6.515/77'   => 'C',
+            'casado com separação de bens após lei nº 6.515/77'  => 'C',
             'união estável'                                      => 'A',
             'separado judicialmente'                             => 'J',
             'divorciado'                                         => 'D',
             'viúvo'                                              => 'V',
-            'casado com comunhão total ANTES lei nº 6.515/77'    => 'C',
-            'casado com comunhão parcial ANTES lei nº 6.515/77'  => 'C',
-            'casado com separação de bens ANTES lei nº 6.515/77' => 'C',
+            'casado com comunhão total antes lei nº 6.515/77'    => 'C',
+            'casado com comunhão parcial antes lei nº 6.515/77'  => 'C',
+            'casado com separação de bens antes lei nº 6.515/77' => 'C',
             'casado com separação obrigatória de bens'           => 'C',
             'união estável com separação total de bens'          => 'A',
         ];
@@ -312,13 +312,13 @@ class WsCarteira
         }
 
         $marriedCivilStatuses = [
-            'casado com comunhão total APÓS lei nº 6.515/77',
-            'casado com comunhão parcial APÓS lei nº 6.515/77',
-            'casado com separação de bens APÓS lei nº 6.515/77',
+            'casado com comunhão total após lei nº 6.515/77',
+            'casado com comunhão parcial após lei nº 6.515/77',
+            'casado com separação de bens após lei nº 6.515/77',
             'união estável',
-            'casado com comunhão total ANTES lei nº 6.515/77',
-            'casado com comunhão parcial ANTES lei nº 6.515/77',
-            'casado com separação de bens ANTES lei nº 6.515/77',
+            'casado com comunhão total antes lei nº 6.515/77',
+            'casado com comunhão parcial antes lei nº 6.515/77',
+            'casado com separação de bens antes lei nº 6.515/77',
             'casado com separação obrigatória de bens',
         ];
 
@@ -336,13 +336,13 @@ class WsCarteira
         }
 
         $civilStatusRegimes = [
-            'casado com comunhão total APÓS lei nº 6.515/77'     => 'U',
-            'casado com comunhão parcial APÓS lei nº 6.515/77'   => 'P',
-            'casado com separação de bens APÓS lei nº 6.515/77'  => 'S',
+            'casado com comunhão total após lei nº 6.515/77'     => 'U',
+            'casado com comunhão parcial após lei nº 6.515/77'   => 'P',
+            'casado com separação de bens após lei nº 6.515/77'  => 'S',
             'união estável'                                      => 'S',
-            'casado com comunhão total ANTES lei nº 6.515/77'    => 'U',
-            'casado com comunhão parcial ANTES lei nº 6.515/77'  => 'P',
-            'casado com separação de bens ANTES lei nº 6.515/77' => 'S',
+            'casado com comunhão total antes lei nº 6.515/77'    => 'U',
+            'casado com comunhão parcial antes lei nº 6.515/77'  => 'P',
+            'casado com separação de bens antes lei nº 6.515/77' => 'S',
             'casado com separação obrigatória de bens'           => 'S',
         ];
 
@@ -374,5 +374,54 @@ class WsCarteira
         }
 
         return $periodicityCode;
+    }
+
+    /**
+     * processAddress()
+     * Retorna o endereço do cliente formatado
+     */
+    public static function processAddress(
+        string $address,
+        int $number,
+        ?string $complement,
+        string $neighborhood,
+        string $city,
+        string $state,
+        string $postalCode,
+        string $countryAbbreviation,
+        int $addressLength = 40,
+        int $neighborhoodLength = 15
+    ): array {
+        $number = self::sanitizeString($number);
+
+        if ($complement) {
+            $complement = self::abbreviateAddress($complement, $addressLength);
+        }
+
+        $street = self::abbreviateAddress("$address, $number", $addressLength);
+        $fullAddress = "$street, $number $complement";
+
+        // Caso ainda tenha mais de 40 caracteres;
+        if (strlen($fullAddress) > $addressLength) {
+            $fullAddress = self::abbreviateAddress($fullAddress, ($addressLength - strlen("$street, $number ")));
+        }
+
+        // Verifica se ainda tiver mais de 40 caracteres vai cortar o endereço
+        if (strlen($fullAddress) > $addressLength) {
+            $street = substr($street, 0, ($addressLength - strlen(", $number $complement")));
+        }
+
+        $neighborhood = self::abbreviateAddress($neighborhood, $neighborhoodLength);
+
+        return [
+            'logradouro' => $street,
+            'numero' => $number,
+            'complemento' => $complement,
+            'bairro' => $neighborhood,
+            'cidade' => self::sanitizeString($city),
+            'uf' => $state,
+            'cep' => $postalCode,
+            'pais' => $countryAbbreviation,
+        ];
     }
 }
