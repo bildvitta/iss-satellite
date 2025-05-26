@@ -50,6 +50,10 @@ class Mega
      */
     public static function getFinancialStatementBaseDate(array $data): array
     {
+        if (empty($data)) {
+            return [];
+        }
+
         $data_base = "to_date(:data_base, 'dd/mm/yyyy') - 1";
 
         $query = "
