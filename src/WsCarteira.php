@@ -20,25 +20,25 @@ class WsCarteira
      * Faz uma chamada no SoapServer do WS Carteira.
      * Não é necessário passar o login e senha, pois eles são passados automaticamente.
      */
-    static public function call(string $call, array $data = []): array
+    public static function call(string $call, array $data = []): array
     {
-        if (!config('iss-satellite.wscarteira.wsdl')) {
+        if (! config('iss-satellite.wscarteira.wsdl')) {
             return [
-                'error' => true,
+                'error'   => true,
                 'message' => __('WSCarteira WSDL config not found'),
             ];
         }
 
         $soapClient = new SoapClient(config('iss-satellite.wscarteira.wsdl'), [
-            'encoding' => 'UTF-8',
-            'trace' => 1,
-            'exceptions' => 1,
+            'encoding'       => 'UTF-8',
+            'trace'          => 1,
+            'exceptions'     => 1,
             'stream_context' => stream_context_create([
-                    'ssl' => [
-                        'verify_peer'      => false,
-                        'verify_peer_name' => false,
-                    ],
-                ]),
+                'ssl' => [
+                    'verify_peer'      => false,
+                    'verify_peer_name' => false,
+                ],
+            ]),
             'cache_wsdl' => WSDL_CACHE_NONE,
         ]);
 
@@ -49,16 +49,16 @@ class WsCarteira
 
         $result = $soapClient->__soapCall($call, $data);
 
-        if (!$result) {
+        if (! $result) {
             return [
-                'error' => true,
+                'error'   => true,
                 'message' => $soapClient->getError(),
             ];
         }
 
-        if (!is_array($result)) {
+        if (! is_array($result)) {
             return [
-                'error' => true,
+                'error'   => true,
                 'message' => __('Unknown error'),
             ];
         }
@@ -67,20 +67,20 @@ class WsCarteira
 
         if ($resultArray[0]['Erro'] === 'true' || $resultArray[0]['Descricao'] !== '') {
             return [
-                'error' => true,
+                'error'   => true,
                 'message' => "$call: {$resultArray[0]['Descricao']}",
             ];
         }
 
         if ($resultArray[0]['Erro'] === 'false' || $resultArray[0]['Descricao'] === '') {
             return [
-                'error' => false,
+                'error'   => false,
                 'message' => "$call: Success",
             ];
         }
 
         return [
-            'error' => true,
+            'error'   => true,
             'message' => 'Erro desconhecido',
         ];
     }
@@ -89,9 +89,9 @@ class WsCarteira
      * sanitizaDados()
      * Substitui caracteres especiais por caracteres comuns e outros caracteres por underline
      */
-    static public function sanitizeString(string $string): string
+    public static function sanitizeString(string $string): string
     {
-        if (!$string) {
+        if (! $string) {
             return $string;
         }
 
@@ -114,84 +114,84 @@ class WsCarteira
      * abreviar()
      * Abrevia prefixos comuns de um endereço
      */
-    static public function abbreviateAddressPrefix(string $address): string
+    public static function abbreviateAddressPrefix(string $address): string
     {
         $abbreviations = [
-            'AREA' => 'A',
-            'ACESSO' => 'AC',
-            'AEROPORTO' => 'AER',
-            'ALAMEDA ' => 'AL',
-            'APARTAMENTO' => 'AP',
-            'APT' => 'AP',
-            'APTO' => 'AP',
-            'AV.' => 'AV',
-            'AVE' => 'AV',
-            'AVEN' => 'AV',
-            'AVENIDA' => 'AV',
-            'BALNEARIO' => 'BAL',
-            'BECO' => 'BC',
-            'BLOCO' => 'BL',
-            'BOSQUE' => 'BSQ',
-            'CASA' => 'CS',
-            'CALÇADA' => 'CAL',
-            'CANAL' => 'CAN',
-            'CHACARA' => 'CH',
-            'CAMINHO' => 'CAM',
-            'CAMPO' => 'CPO',
-            'CICLOVIA' => 'CIC',
-            'CONDOMINIO' => 'CD',
-            'CONDOMÍNIO' => 'CD',
-            'CONJUNTO' => 'CJ',
-            'COOPERATIVA' => 'COOP',
-            'CORREGO' => 'CRG',
-            'CONTORNO' => 'CTN',
-            'DESVIO' => 'DSV',
-            'DISTRITO' => 'DT',
-            'ESTRADA' => 'EST',
-            'ESTADIO' => 'ETD',
-            'EVANGELICA' => 'EVAN',
-            'FAZENDA' => 'FAZ',
-            'GALERIA' => 'GAL',
-            'GRANJA' => 'GRJ',
+            'AREA'         => 'A',
+            'ACESSO'       => 'AC',
+            'AEROPORTO'    => 'AER',
+            'ALAMEDA '     => 'AL',
+            'APARTAMENTO'  => 'AP',
+            'APT'          => 'AP',
+            'APTO'         => 'AP',
+            'AV.'          => 'AV',
+            'AVE'          => 'AV',
+            'AVEN'         => 'AV',
+            'AVENIDA'      => 'AV',
+            'BALNEARIO'    => 'BAL',
+            'BECO'         => 'BC',
+            'BLOCO'        => 'BL',
+            'BOSQUE'       => 'BSQ',
+            'CASA'         => 'CS',
+            'CALÇADA'      => 'CAL',
+            'CANAL'        => 'CAN',
+            'CHACARA'      => 'CH',
+            'CAMINHO'      => 'CAM',
+            'CAMPO'        => 'CPO',
+            'CICLOVIA'     => 'CIC',
+            'CONDOMINIO'   => 'CD',
+            'CONDOMÍNIO'   => 'CD',
+            'CONJUNTO'     => 'CJ',
+            'COOPERATIVA'  => 'COOP',
+            'CORREGO'      => 'CRG',
+            'CONTORNO'     => 'CTN',
+            'DESVIO'       => 'DSV',
+            'DISTRITO'     => 'DT',
+            'ESTRADA'      => 'EST',
+            'ESTADIO'      => 'ETD',
+            'EVANGELICA'   => 'EVAN',
+            'FAZENDA'      => 'FAZ',
+            'GALERIA'      => 'GAL',
+            'GRANJA'       => 'GRJ',
             'HABITACIONAL' => 'HAB',
-            'JARDIM' => 'JD',
-            'LAGOA' => 'LGA',
-            'LAGO' => 'LGO',
-            'LOTEAMENTO' => 'LOT',
-            'LOTE' => 'LT',
-            'MARGINAL' => 'MARG',
-            'MERCADO' => 'MER',
-            'MODULO' => 'MOD',
-            'MORRO' => 'MRO',
-            'MONTE' => 'MTE',
-            'NUCLEO' => 'NUC',
-            'PATIO' => 'PAT',
-            'PARQUE' => 'PRQ',
-            'PASSARELA' => 'PSA',
-            'PONTE' => 'PTE',
-            'PC' => 'PÇ',
-            'PC.' => 'PÇ',
-            'PÇ.' => 'PÇ',
-            'PRAÇA' => 'PÇ',
-            'PRACA' => 'PÇ',
-            'PROFESSOR' => 'PROF',
-            'PROFESSORA' => 'PROFa',
-            'QUADRA' => 'QD',
-            'RECANTO' => 'REC',
-            'RESIDENCIAL' => 'RES',
-            'RETA' => 'RET',
-            'ROD' => 'ROD',
-            'ROD.' => 'ROD',
-            'RODOVIA' => 'ROD',
-            'RUA' => 'R',
-            'SALA' => 'SL',
-            'SETOR' => 'ST',
-            'TERMINAL' => 'TER',
-            'TORRE' => 'TR',
-            'TREVO' => 'TRV',
-            'TUNEL' => 'TUN',
-            'VILA' => 'VL',
-            'VALE' => 'VLE'
+            'JARDIM'       => 'JD',
+            'LAGOA'        => 'LGA',
+            'LAGO'         => 'LGO',
+            'LOTEAMENTO'   => 'LOT',
+            'LOTE'         => 'LT',
+            'MARGINAL'     => 'MARG',
+            'MERCADO'      => 'MER',
+            'MODULO'       => 'MOD',
+            'MORRO'        => 'MRO',
+            'MONTE'        => 'MTE',
+            'NUCLEO'       => 'NUC',
+            'PATIO'        => 'PAT',
+            'PARQUE'       => 'PRQ',
+            'PASSARELA'    => 'PSA',
+            'PONTE'        => 'PTE',
+            'PC'           => 'PÇ',
+            'PC.'          => 'PÇ',
+            'PÇ.'          => 'PÇ',
+            'PRAÇA'        => 'PÇ',
+            'PRACA'        => 'PÇ',
+            'PROFESSOR'    => 'PROF',
+            'PROFESSORA'   => 'PROFa',
+            'QUADRA'       => 'QD',
+            'RECANTO'      => 'REC',
+            'RESIDENCIAL'  => 'RES',
+            'RETA'         => 'RET',
+            'ROD'          => 'ROD',
+            'ROD.'         => 'ROD',
+            'RODOVIA'      => 'ROD',
+            'RUA'          => 'R',
+            'SALA'         => 'SL',
+            'SETOR'        => 'ST',
+            'TERMINAL'     => 'TER',
+            'TORRE'        => 'TR',
+            'TREVO'        => 'TRV',
+            'TUNEL'        => 'TUN',
+            'VILA'         => 'VL',
+            'VALE'         => 'VLE',
         ];
 
         $words = explode(' ', $address);
@@ -209,7 +209,7 @@ class WsCarteira
      * removerElementosLigacao()
      * Remove preposições e artigos de uma string
      */
-    static public function removePrepositions(string $string): string
+    public static function removePrepositions(string $string): string
     {
         $prepositions = [
             ' Da ', ' da ', ' DA ',
@@ -217,23 +217,23 @@ class WsCarteira
             ' Do ', ' do ', ' DO ',
             ' Das ', ' das ', ' DAS ',
             ' Dos ', ' dos ', ' DOS ',
-            ' e ', ' E ', ' para '
+            ' e ', ' E ', ' para ',
         ];
 
-         return str_replace($prepositions, ' ', $string);
+        return str_replace($prepositions, ' ', $string);
     }
 
     /**
      * abreviarPalavras()
      * Abrevia palavras de um texto
      */
-    static public function abbreviateText(string $text, int $maxLenght): string
+    public static function abbreviateText(string $text, int $maxLenght): string
     {
         $size = strlen($text);
         $words = explode(' ', $text);
         $wordsCount = count($words);
         $i = $wordsCount - 2;
-    
+
         while ($size > $maxLenght) {
             if ($i < 0) {
                 break;
@@ -254,7 +254,7 @@ class WsCarteira
      * Se o endereço ainda estiver muito grande, remove preposições e artigos.
      * Se o endereço ainda estiver muito grande, abrevia palavras.
      */
-    static public function abbreviateAddress(string $address, int $maxLenght): string
+    public static function abbreviateAddress(string $address, int $maxLenght): string
     {
         $address = self::sanitizeString($address);
         $address = str_replace(' ', '', $address);
@@ -279,24 +279,25 @@ class WsCarteira
      * clienteEstadoCilvil()
      * Retorna o código de estado civil aceito pelo WS Carteira
      */
-    static public function getCivilStatusCode(string $civilStatusName): string
+    public static function getCivilStatusCode(string $civilStatusName): string
     {
         $civilStatuses = [
-            'pessoa Jurídica' => '',
-            'solteiro' => 'S',
-            'casado com comunhão total APÓS lei nº 6.515/77' => 'C',
-            'casado com comunhão parcial APÓS lei nº 6.515/77' => 'C',
-            'casado com separação de bens APÓS lei nº 6.515/77' => 'C',
-            'união estável' => 'A',
-            'separado judicialmente' => 'J',
-            'divorciado' => 'D',
-            'viúvo' => 'V',
-            'casado com comunhão total ANTES lei nº 6.515/77' => 'C',
-            'casado com comunhão parcial ANTES lei nº 6.515/77' => 'C',
+            'pessoa Jurídica'                                    => '',
+            'solteiro'                                           => 'S',
+            'casado com comunhão total APÓS lei nº 6.515/77'     => 'C',
+            'casado com comunhão parcial APÓS lei nº 6.515/77'   => 'C',
+            'casado com separação de bens APÓS lei nº 6.515/77'  => 'C',
+            'união estável'                                      => 'A',
+            'separado judicialmente'                             => 'J',
+            'divorciado'                                         => 'D',
+            'viúvo'                                              => 'V',
+            'casado com comunhão total ANTES lei nº 6.515/77'    => 'C',
+            'casado com comunhão parcial ANTES lei nº 6.515/77'  => 'C',
             'casado com separação de bens ANTES lei nº 6.515/77' => 'C',
-            'casado com separação obrigatória de bens' => 'C',
-            'união estável com separação total de bens' => 'A',
+            'casado com separação obrigatória de bens'           => 'C',
+            'união estável com separação total de bens'          => 'A',
         ];
+
         return $civilStatuses[mb_strtolower($civilStatusName)];
     }
 
@@ -304,7 +305,7 @@ class WsCarteira
      * eCasado()
      * Retorna se o estado civil é casado
      */
-    static public function isMarried(string $civilStatusName): bool
+    public static function isMarried(string $civilStatusName): bool
     {
         if (empty($civilStatusName)) {
             return false;
@@ -328,21 +329,21 @@ class WsCarteira
      * regimeCasamento()
      * Retorna o código de regime de casamento aceito pelo WS Carteira
      */
-    static public function getMarriageRegimeCode(string $civilStatusName): string
+    public static function getMarriageRegimeCode(string $civilStatusName): string
     {
-        if (!self::isMarried($civilStatusName)) {
+        if (! self::isMarried($civilStatusName)) {
             return '';
         }
 
         $civilStatusRegimes = [
-            'casado com comunhão total APÓS lei nº 6.515/77' => 'U',
-            'casado com comunhão parcial APÓS lei nº 6.515/77' => 'P',
-            'casado com separação de bens APÓS lei nº 6.515/77' => 'S',
-            'união estável' => 'S',
-            'casado com comunhão total ANTES lei nº 6.515/77' => 'U',
-            'casado com comunhão parcial ANTES lei nº 6.515/77' => 'P',
+            'casado com comunhão total APÓS lei nº 6.515/77'     => 'U',
+            'casado com comunhão parcial APÓS lei nº 6.515/77'   => 'P',
+            'casado com separação de bens APÓS lei nº 6.515/77'  => 'S',
+            'união estável'                                      => 'S',
+            'casado com comunhão total ANTES lei nº 6.515/77'    => 'U',
+            'casado com comunhão parcial ANTES lei nº 6.515/77'  => 'P',
             'casado com separação de bens ANTES lei nº 6.515/77' => 'S',
-            'casado com separação obrigatória de bens' => 'S',
+            'casado com separação obrigatória de bens'           => 'S',
         ];
 
         return $civilStatusRegimes[mb_strtolower($civilStatusName)];
@@ -352,25 +353,26 @@ class WsCarteira
      * getIntervaloMes()
      * Retona o código de periodicidade aceito pelo WS Carteira
      */
-    static public function getPeriodicityCode(string $periodicityName): string
+    public static function getPeriodicityCode(string $periodicityName): string
     {
         switch ($periodicityName) {
-            case 'bimonthly': //BIMESTRAL
+            case 'bimonthly': // BIMESTRAL
                 $periodicityCode = 2;
                 break;
-            case 'quarterly': //TRIMESTRAL
+            case 'quarterly': // TRIMESTRAL
                 $periodicityCode = 3;
                 break;
-            case 'semiannual'://SEMESTRAL
+            case 'semiannual':// SEMESTRAL
                 $periodicityCode = 6;
                 break;
-            case 'yearly'://ANUAL
+            case 'yearly':// ANUAL
                 $periodicityCode = 12;
                 break;
             default:
                 $periodicityCode = 1;
                 break;
         }
+
         return $periodicityCode;
     }
 }

@@ -12,7 +12,7 @@ enum FinnetCallType: int
 
 class Finnet
 {
-    static public function call(array $data = [], FinnetCallType $type = FinnetCallType::DEFAULT): array
+    public static function call(array $data = [], FinnetCallType $type = FinnetCallType::DEFAULT): array
     {
         switch ($type) {
             case FinnetCallType::QRCODE:
@@ -24,9 +24,9 @@ class Finnet
                 break;
         }
 
-        if (!$url) {
+        if (! $url) {
             return [
-                'error' => true,
+                'error'   => true,
                 'message' => __('Finnet url config not found'),
             ];
         }
@@ -36,7 +36,7 @@ class Finnet
 
         if ($response->failed()) {
             return [
-                'error' => true,
+                'error'   => true,
                 'message' => $response->body(),
             ];
         }
