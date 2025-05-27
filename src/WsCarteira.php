@@ -24,7 +24,7 @@ class WsCarteira
         if (! config('iss-satellite.wscarteira.wsdl')) {
             return [
                 'error'   => true,
-                'message' => __('WSCarteira WSDL config not found'),
+                'message' => 'WSCarteira WSDL config not found',
             ];
         }
 
@@ -46,41 +46,36 @@ class WsCarteira
             'Senha' => config('iss-satellite.wscarteira.password'),
         ], $data);
 
-        $result = $soapClient->__soapCall($call, $data);
+        $result = $soapClient->__soapCall($call, [$data]);
 
         if (! $result) {
             return [
                 'error'   => true,
-                'message' => $soapClient->getError(),
+                'message' => 'Empty response from WSCarteira',
             ];
         }
 
-        if (! is_array($result)) {
-            return [
-                'error'   => true,
-                'message' => __('Unknown error'),
-            ];
-        }
+        if (is_object($result)) {
+            $resultArray = array_values(get_object_vars($result));
 
-        $resultArray = array_values($result);
+            if ($resultArray[0]->Erro === true || $resultArray[0]->Descricao !== '') {
+                return [
+                    'error'   => true,
+                    'message' => "$call: {$resultArray[0]->Descricao}",
+                ];
+            }
 
-        if ($resultArray[0]['Erro'] === 'true' || $resultArray[0]['Descricao'] !== '') {
-            return [
-                'error'   => true,
-                'message' => "$call: {$resultArray[0]['Descricao']}",
-            ];
-        }
-
-        if ($resultArray[0]['Erro'] === 'false' || $resultArray[0]['Descricao'] === '') {
-            return [
-                'error'   => false,
-                'message' => "$call: Success",
-            ];
+            if ($resultArray[0]->Erro === false || $resultArray[0]->Descricao === '') {
+                return [
+                    'error'   => false,
+                    'message' => "$call: Success",
+                ];
+            }
         }
 
         return [
             'error'   => true,
-            'message' => 'Erro desconhecido',
+            'message' => 'Unknown error',
         ];
     }
 
