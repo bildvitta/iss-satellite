@@ -2,8 +2,10 @@
 
 namespace Nave\IssSatellite;
 
-use Illuminate\Support\Carbon;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 
 class Mega
@@ -17,7 +19,7 @@ class Mega
      * insertTelefones() - Utiliza ORM rudimentar do Mega que fizeram, ver se vai importar
      * sincronizaPermutantes() - Rotina de buscar no Mega por permutantes e inserir no SYS. Utiliza uma query Mega no início mas o restante é SYS
      */
-    protected static function connectionConfig()
+    protected static function connectionConfig(): void
     {
         config([
             'database.connections.iss-satellite-mega' => config('iss-satellite.mega.db'),
@@ -186,7 +188,7 @@ class Mega
                     AGN_ST_CPF_CONJUGE,
                     AGN_ST_RG_CONJUGE,
                     AGN_ST_NACIONALIDADE
-            from  bild.vw_bld_bca_cto_cli_api 
+            from  bild.vw_bld_bca_cto_cli_api
             WHERE AGN_ST_CPF = ':document'
                     OR CNPJ = ':document'
                     AND rownum = 1";
@@ -226,7 +228,7 @@ class Mega
                     AGN_ST_CPF_CONJUGE,
                     AGN_ST_RG_CONJUGE,
                     AGN_ST_NACIONALIDADE
-            from  bild.vw_bld_bca_cto_cli_api 
+            from  bild.vw_bld_bca_cto_cli_api
             WHERE CTO_IN_CODIGO = ':cto_in_codigo'
                     AND rownum = 1";
 
@@ -857,7 +859,7 @@ class Mega
         $sql_Where .= ($num_parcela) && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_PARCELA   =  {$num_parcela}        " : null;
         $sql_Where .= ($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_SEQUENCIA =  {$PROP_IN_SEQUENCIA}  " : null;
 
-        $query = "SELECT 
+        $query = "SELECT
                     {$coluna_base64}
                     P.PROP_IN_CODIGO,
                     P.DOCUMENTO,
@@ -879,9 +881,202 @@ class Mega
                     P.VLR_PRESTAMISTA,
                     P.AGNCFI_IN_CODIGO,
                     P.AGN_CH_BOLETO
-            FROM BILD.CLI_PROPOSTA_SYS  P 
+            FROM BILD.CLI_PROPOSTA_SYS  P
             {$sql_Where} ";
 
         return self::connection()->select($query);
+    }
+
+    public static function addPropostaMega(string $cpfCliente, string $codUnidade, string $codProposta, int $codTermo, string $status): void
+    {
+        self::connection()
+            ->table('bild.ALX_CLIINTPROPOSTATERMO')
+            ->insert([
+                'PROP_CLIENTE' => $cpfCliente,
+                'EST_IN_CODIGO' => $codUnidade,
+                'PROP_IN_PROP' => $codProposta,
+                'TER_IN_CODIGO' => $codTermo,
+                'PROP_CH_STATUS' => $status,
+                'PROP_DT_IMPORT' => now()->toDateTimeString(),
+                'PROP_DT_PROCES' => now()->toDateTimeString(),
+            ]);
+    }
+
+    public static function addParcelasMega(
+        string $cpfCliente,
+        string $codUnidade,
+        int $numeroParcela,
+        string $codProposta,
+        string $tipoParcela,
+        string $dataVencimento,
+        string $valor,
+        string $status,
+        int $porcentagem,
+        string $dataImporta): void
+    {
+        self::connection()
+            ->table('bild.ALX_CLIINTPROPTERMOPARC')
+            ->insert([
+                'PROP_CLIENTE' => $cpfCliente,
+                'EST_IN_CODIGO' => $codUnidade,
+                'PROP_IN_PARC' => $numeroParcela,
+                'PROP_IN_PROP' => $codProposta,
+                'PROP_CH_PARC' => $tipoParcela,
+                'PROP_DT_VENCTO' => DB::raw("TO_DATE('$dataVencimento', 'DD/MM/YYYY')"),
+                'PROP_RE_VALOR' => $valor,
+                'PROP_CH_STATUS' => $status,
+                'PROP_ST_OBSERVACAO' => '',
+                'PROP_IN_PERC' => $porcentagem,
+                'PROP_DT_IMPORT' => DB::raw("TO_DATE('$dataImporta', 'YYYY-MM-DD HH24:MI:SS')"),
+            ]);
+    }
+
+    public static function addParcelasCorrecaoMega(
+        string $cpfCliente,
+        string $codUnidade,
+        string $codProposta,
+        int $numeroParcela,
+        int $indice,
+        string $dataVigencia,
+        int $defasagem,
+        string $reajuste,
+        string $juros,
+        string $tipoJuro,
+        string $vincula,
+        string $dataImporta): void
+    {
+        self::connection()
+            ->table('bild.ALX_CLIINTPROPTERCOR')
+            ->insert([
+                'PROP_CLIENTE' => $cpfCliente,
+                'EST_IN_CODIGO' => $codUnidade,
+                'PROP_IN_PROP' => $codProposta,
+                'PROP_IN_PARC' => $numeroParcela,
+                'PROP_IN_INDICE' => $indice,
+                'PROP_DT_VIGEN' => DB::raw("TO_DATE('$dataVigencia', 'DD/MM/YYYY')"),
+                'PROP_IN_DEFAS' => $defasagem,
+                'PROP_CH_JUROS' => $reajuste,
+                'PROP_RE_JUROS' => $juros,
+                'PROP_CH_TPJUR' => $tipoJuro,
+                'PROP_CH_VINC' => $vincula,
+                'PROP_DT_IMPORT' => DB::raw("TO_DATE('$dataImporta', 'YYYY-MM-DD HH24:MI:SS')"),
+            ]);
+    }
+
+    public static function finalizacaoMega(int $codigoMega, string $dataIntegracao, string $codProposta): void
+    {
+        self::connection()
+            ->table('bild.ALX_CLIINTEGRACAOSYS')
+            ->insert([
+                'INT_IN_CODIGO' => $codigoMega,
+                'INT_DT_DATA' => DB::raw("TO_DATE('$dataIntegracao', 'DD/MM/YYYY HH24:MI:SS')"),
+                'INT_IN_DOCTO' => $codProposta,
+            ]);
+    }
+
+    public static function consultaContrato(int $idUnidade, string $cpfCliente, ?int $codContrato): SupportCollection
+    {
+        return self::connection()
+            ->table('bild.car_contrato as cto')
+            ->select([
+                'cto.cto_in_codigo as CONTRATO',
+                DB::raw("CASE cli.agn_ch_tipopessoafj WHEN 'J' THEN cli.agn_st_cgc ELSE fis.agn_st_cpf END as CPF_CNPJ"),
+                DB::raw(
+                    "CASE cto.cto_ch_status
+                        WHEN 'A' THEN 'Ativo'
+                        WHEN 'U' THEN 'Inadimplente'
+                        WHEN 'D' THEN 'Distratado'
+                        WHEN 'T' THEN 'Transferido'
+                        WHEN 'C' THEN 'Cessão de Direitos'
+                        WHEN 'Q' THEN 'Quitado'
+                    END as STATUS"
+                ),
+                'env.est_in_codigo as COD_EXPORTA',
+                DB::raw("TO_CHAR(oco.oco_dt_cadastro, 'YYYY-MM-DD HH24:MI:SS') as DATA_IMPORTACAO"),
+                'emp.est_in_codigo as COD_EMPREENDIMENTO',
+                'emp.est_st_nome as EMPREENDIMENTO',
+                'blo.est_in_codigo as COD_BLOCO',
+                'blo.est_st_nome as BLOCO',
+                'uni.est_st_codigo as COD_ST_UNIDADE',
+                'uni.est_st_nome as UNIDADE',
+                'oco.oco_dt_cadastro',
+            ])
+            ->join('bild.car_contrato_envolvido as env', function (JoinClause $join) {
+                $join->on('cto.cto_in_codigo', '=', 'env.cto_in_codigo')
+                    ->on('cto.org_tab_in_codigo', '=', 'env.org_tab_in_codigo')
+                    ->on('cto.org_pad_in_codigo', '=', 'env.org_pad_in_codigo')
+                    ->on('cto.org_in_codigo', '=', 'env.org_in_codigo')
+                    ->on('cto.org_tau_st_codigo', '=', 'env.org_tau_st_codigo');
+            })
+            ->join('bild.dbm_unidade as un1', function (JoinClause $join) {
+                $join->on('env.est_in_codigo', '=', 'un1.est_in_codigo')
+                    ->on('env.org_in_codigo', '=', 'un1.org_in_codigo')
+                    ->on('env.org_tau_st_codigo', '=', 'un1.org_tau_st_codigo')
+                    ->on('env.org_pad_in_codigo', '=', 'un1.org_pad_in_codigo')
+                    ->on('env.org_tab_in_codigo', '=', 'un1.org_tab_in_codigo');
+            })
+            ->join('bild.dbm_estrutura as emp', function (JoinClause $join) {
+                $join->on('un1.emp_est_in_codigo', '=', 'emp.est_in_codigo')
+                    ->on('un1.org_in_codigo', '=', 'emp.org_in_codigo')
+                    ->on('un1.org_tau_st_codigo', '=', 'emp.org_tau_st_codigo')
+                    ->on('un1.org_pad_in_codigo', '=', 'emp.org_pad_in_codigo')
+                    ->on('un1.org_tab_in_codigo', '=', 'emp.org_tab_in_codigo');
+            })
+            ->join('bild.dbm_estrutura as blo', function (JoinClause $join) {
+                $join->on('un1.blo_est_in_codigo', '=', 'blo.est_in_codigo')
+                    ->on('un1.org_in_codigo', '=', 'blo.org_in_codigo')
+                    ->on('un1.org_tau_st_codigo', '=', 'blo.org_tau_st_codigo')
+                    ->on('un1.org_pad_in_codigo', '=', 'blo.org_pad_in_codigo')
+                    ->on('un1.org_tab_in_codigo', '=', 'blo.org_tab_in_codigo');
+            })
+            ->join('bild.dbm_estrutura as uni', function (JoinClause $join) {
+                $join->on('un1.est_in_codigo', '=', 'uni.est_in_codigo')
+                    ->on('un1.org_in_codigo', '=', 'uni.org_in_codigo')
+                    ->on('un1.org_tau_st_codigo', '=', 'uni.org_tau_st_codigo')
+                    ->on('un1.org_pad_in_codigo', '=', 'uni.org_pad_in_codigo')
+                    ->on('un1.org_tab_in_codigo', '=', 'uni.org_tab_in_codigo');
+            })
+            ->join('bild.car_contrato_cliente as ccl', function (JoinClause $join) {
+                $join->on('cto.cto_in_codigo', '=', 'ccl.cto_in_codigo')
+                    ->on('cto.org_tab_in_codigo', '=', 'ccl.org_tab_in_codigo')
+                    ->on('cto.org_pad_in_codigo', '=', 'ccl.org_pad_in_codigo')
+                    ->on('cto.org_in_codigo', '=', 'ccl.org_in_codigo')
+                    ->on('cto.org_tau_st_codigo', '=', 'ccl.org_tau_st_codigo');
+            })
+            ->join('bild.glo_agentes as cli', function (JoinClause $join) {
+                $join->on('ccl.agn_tab_in_codigo', '=', 'cli.agn_tab_in_codigo')
+                    ->on('ccl.agn_pad_in_codigo', '=', 'cli.agn_pad_in_codigo')
+                    ->on('ccl.agn_in_codigo', '=', 'cli.agn_in_codigo');
+            })
+            ->leftJoin('bild.glo_pessoa_fisica as fis', function (JoinClause $join) {
+                $join->on('cli.agn_tab_in_codigo', '=', 'fis.agn_tab_in_codigo')
+                    ->on('cli.agn_pad_in_codigo', '=', 'fis.agn_pad_in_codigo')
+                    ->on('cli.agn_in_codigo', '=', 'fis.agn_in_codigo')
+                    ->where('fis.agn_ch_tipo', '=', 'P');
+            })
+            ->join('bild.dbm_ocorrenciacontrato as oct', function (JoinClause $join) {
+                $join->on('cto.cto_in_codigo', '=', 'oct.cto_in_codigo')
+                    ->on('cto.org_tab_in_codigo', '=', 'oct.org_tab_in_codigo')
+                    ->on('cto.org_pad_in_codigo', '=', 'oct.org_pad_in_codigo')
+                    ->on('cto.org_in_codigo', '=', 'oct.org_in_codigo')
+                    ->on('cto.org_tau_st_codigo', '=', 'oct.org_tau_st_codigo');
+            })
+            ->join('bild.dbm_geraocorrencia as oco', 'oct.oco_in_codigo', '=', 'oco.oco_in_codigo')
+            ->where('oco.ocs_in_codigo', 44)
+            ->where('oco.ocs_in_modulo', 1)
+            ->whereNotNull('env.est_in_codigo')
+            ->where('cto.cto_ch_tipo', 'V')
+            ->where('cto.cto_ch_status', 'A')
+            ->whereRaw("bild.alx_pck_utilafh.F_StatusAgente(cto.org_tab_in_codigo, cto.org_pad_in_codigo, cto.fil_in_codigo, 'G') = 'A'")
+            ->where(function (Builder $query) use ($idUnidade, $cpfCliente, $codContrato) {
+                $query->where(function (Builder $subQuery) use ($idUnidade, $cpfCliente) {
+                    $subQuery->where('env.est_in_codigo', $idUnidade)
+                        ->whereRaw("CASE cli.agn_ch_tipopessoafj WHEN 'J' THEN cli.agn_st_cgc ELSE fis.agn_st_cpf END = ?", [$cpfCliente]);
+                })
+                    ->orWhere('cto.cto_in_codigo', $codContrato);
+            })
+            ->limit(3)
+            ->orderByDesc('oco.oco_dt_cadastro')
+            ->get();
     }
 }
