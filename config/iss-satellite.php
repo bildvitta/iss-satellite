@@ -31,4 +31,16 @@ return [
         'url'        => env('MS_SATELLITE_FINNET_URL', ''),
         'url_qrcode' => env('MS_SATELLITE_FINNET_URL_QRCODE', ''),
     ],
+
+    'ssh' => [
+        'host' => env('SSH_HOST'),
+        'port' => env('SSH_PORT', 22),
+        'username' => env('SSH_USERNAME'),
+        'password' => env('SSH_PASSWORD'),
+
+        'mega' => [
+            'tunnel' => env('MEGA_TUNNEL'),
+            'tunnel_port' => env('MEGA_TUNNEL_PORT', 1521),
+        ],
+    ],
 ];
