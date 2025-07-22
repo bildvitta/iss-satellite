@@ -7,6 +7,7 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
+use PDO;
 
 class Mega
 {
@@ -1078,5 +1079,38 @@ class Mega
             ->limit(3)
             ->orderByDesc('oco.oco_dt_cadastro')
             ->get();
+    }
+
+    public static function addVinculoMega(
+        int $codFilialMega,
+        string $codContrato,
+        string $cpfCompradorPrincipal,
+        string $cpfVinculado,
+        int $grau,
+        string $percentual,
+        string $tipo): void
+    {
+        $pdo = self::connection()->getPdo();
+        $stmt = $pdo->prepare('BEGIN
+                bild.PRC_BLD_ALL_RENDA_AVAL(
+                    :p_org_in,
+                    :p_cto_in,
+                    :p_agn_pr,
+                    :p_agn_rd,
+                    :p_grau,
+                    :p_perc,
+                    :p_tipo
+                );
+            END;');
+
+        $stmt->bindParam(':p_org_in', $codFilialMega, PDO::PARAM_INT);
+        $stmt->bindParam(':p_cto_in', $codContrato, PDO::PARAM_INT);
+        $stmt->bindParam(':p_agn_pr', $cpfCompradorPrincipal, PDO::PARAM_STR);
+        $stmt->bindParam(':p_agn_rd', $cpfVinculado, PDO::PARAM_STR);
+        $stmt->bindParam(':p_grau', $grau, PDO::PARAM_INT);
+        $stmt->bindParam(':p_perc', $percentual, PDO::PARAM_STR);
+        $stmt->bindParam(':p_tipo', $tipo, PDO::PARAM_STR);
+
+        $stmt->execute();
     }
 }
