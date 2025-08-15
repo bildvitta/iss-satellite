@@ -102,11 +102,14 @@ class Mega
             and vbo.par_in_codigo     = qry_par.par_in_codigo     (+)
         ';
 
-        if (! array_key_exists('data_base', $data)) {
+        if (array_key_exists('data_base', $data)) {
+            $data_base = Carbon::parse($data['data_base'])->format('d/m/Y');
+        } else {
             $data_base = date('Y-m-d');
             $data_base = Carbon::parse($data_base)->format('d/m/Y');
-            $data['data_base'] = $data_base;
         }
+
+        $data['data_base'] = $data_base;
 
         if (array_key_exists('est_in_codigo', $data) && $data['est_in_codigo'] != '0') {
             $query .= 'and vbo.codigo_exporta = :est_in_codigo ';
