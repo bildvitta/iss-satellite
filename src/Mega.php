@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use PDO;
+use Yajra\Oci8\Query\OracleBuilder;
 
 class Mega
 {
@@ -847,45 +848,69 @@ class Mega
         return self::connection()->select($query, $data);
     }
 
-    /**
-     * NÃO TESTADO
-     */
-    public static function listarParcelasGeradasMegaFinnet($id_venda = null, $num_parcela = null, $base64 = false, $PROP_IN_SEQUENCIA = null, $api = null): array
+    public static function listarParcelasGeradasMegaFinnet(
+        int $idVenda,
+        ?int $propInSequencia = null,
+        ?int $numParcela = null,
+        bool $exibeJsonpar = false,
+        bool $exibeBoletoBase64 = false,
+        bool $statusGreaterThanZero = false): SupportCollection
     {
-        /* MOSTRAR E NÃO MOSTRAR A COLUNA DO BASE 64 */
-        $coluna_base64 = ($base64) ? 'P.BOLETOBASE64, ' : null;
+        /*
+         * 00 - Aguardando Json
+         * 10 - Processado
+         * 20 - Baixado
+         * 30 - Integrado com o Oracle
+         * 40 - Integrado com o Mega
+         * 80 - Cancelado
+         * 99 - Processado com Erro
+         */
 
-        $sql_Where = $api ? 'WHERE P.STATUS >= 0' : 'WHERE P.STATUS <> 80';
-        $sql_Where .= ($id_venda) && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_CODIGO    =  {$id_venda}           " : null;
-        $sql_Where .= ($num_parcela) && empty($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_PARCELA   =  {$num_parcela}        " : null;
-        $sql_Where .= ($PROP_IN_SEQUENCIA) ? " AND P.PROP_IN_SEQUENCIA =  {$PROP_IN_SEQUENCIA}  " : null;
-
-        $query = "SELECT
-                    {$coluna_base64}
-                    P.PROP_IN_CODIGO,
-                    P.DOCUMENTO,
-                    P.EST_IN_CODIGO,
-                    P.PROP_VENCTO,
-                    P.VLR_PARCELA,
-                    P.NOSSONUMERO,
-                    P.VALOR_BAIXA,
-                    P.DATA_BAIXA,
-                    P.STATUS,
-                    P.JSONPAR,
-                    P.PROP_IN_PARCELA,
-                    P.RET_STATUS,
-                    P.RET_MENSAGEM,
-                    TO_CHAR(P.DATA_BAIXA, 'YYYY-MM-DD') AS DATA_BAIXA_FORMATO_EN,
-                    TO_CHAR(P.DATA_CREDITO, 'YYYY-MM-DD') AS DATA_CREDITO_FORMATO_EN,
-                    TO_CHAR(P.PROP_VENCTO,'YYYY-MM-DD') AS PROP_VENCTO_FORMATO_EN,
-                    P.PROP_IN_SEQUENCIA,
-                    P.VLR_PRESTAMISTA,
-                    P.AGNCFI_IN_CODIGO,
-                    P.AGN_CH_BOLETO
-            FROM BILD.CLI_PROPOSTA_SYS  P
-            {$sql_Where} ";
-
-        return self::connection()->select($query);
+        return self::connection()
+            ->table('BILD.CLI_PROPOSTA_SYS')
+            ->select([
+                'prop_in_codigo',
+                'documento',
+                'est_in_codigo',
+                'prop_vencto',
+                'vlr_parcela',
+                'nossonumero',
+                'valor_baixa',
+                'data_baixa',
+                'status',
+                'prop_in_parcela',
+                'ret_status',
+                'ret_mensagem',
+                'prop_in_sequencia',
+                'vlr_prestamista',
+                'agncfi_in_codigo',
+                'agn_ch_boleto',
+                DB::raw("TO_CHAR(data_baixa, 'YYYY-MM-DD') AS data_baixa_formato_en"),
+                DB::raw("TO_CHAR(data_credito, 'YYYY-MM-DD') AS data_credito_formato_en"),
+                DB::raw("TO_CHAR(prop_vencto, 'YYYY-MM-DD') AS prop_vencto_formato_en"),
+            ])
+            ->when($exibeBoletoBase64, function (OracleBuilder $query) {
+                $query->addSelect('boletobase64');
+            })
+            ->when($exibeJsonpar, function (OracleBuilder $query) {
+                $query->addSelect('jsonpar');
+            })
+            ->when($idVenda, function (OracleBuilder $query, int $idVenda) {
+                $query->where('prop_in_codigo', $idVenda);
+            })
+            ->when($numParcela, function (OracleBuilder $query, int $numParcela) {
+                $query->where('prop_in_parcela', $numParcela);
+            })
+            ->when($propInSequencia, function (OracleBuilder $query, int $propInSequencia) {
+                $query->where('prop_in_sequencia', $propInSequencia);
+            })
+            ->when($statusGreaterThanZero, function (OracleBuilder $query) {
+                $query->where('status', '>=', 0);
+            }, function (OracleBuilder $query) {
+                $query->where('status', '!=', 80);
+            })
+            ->orderBy('prop_in_sequencia')
+            ->get();
     }
 
     public static function addPropostaMega(string $cpfCliente, string $codUnidade, string $codProposta, int $codTermo, string $status): void
@@ -1112,5 +1137,246 @@ class Mega
         $stmt->bindParam(':p_tipo', $tipo, PDO::PARAM_STR);
 
         $stmt->execute();
+    }
+
+    public static function insereParcelas(
+        int $idVenda,
+        string $documento,
+        int $codigoExportaUnidade,
+        string $vencimento,
+        float $valor,
+        int $numeroParcela,
+        float $vgvPraticado): void
+    {
+        self::connection()
+            ->table('bild.CLI_PROPOSTA_SYS')
+            ->insert([
+                'PROP_IN_CODIGO' => $idVenda,
+                'DOCUMENTO' => $documento,
+                'EST_IN_CODIGO' => $codigoExportaUnidade,
+                'PROP_VENCTO' => DB::raw("TO_DATE('$vencimento', 'DD/MM/YYYY')"),
+                'VLR_PARCELA' => $valor,
+                'PROP_IN_PARCELA' => $numeroParcela,
+                'PROP_RE_VALOR' => $vgvPraticado,
+                'PROP_RE_TT_SINAL' => $valor,
+                'VLR_PRESTAMISTA' => null,
+            ]);
+    }
+
+    public static function alteraVencimentoParcela(int $idVenda, int $propInSequencia, string $vencimento): bool
+    {
+        $parcela = self::connection()
+            ->table('bild.CLI_PROPOSTA_SYS')
+            ->select([
+                'PROP_IN_CODIGO',
+                'DOCUMENTO',
+                'EST_IN_CODIGO',
+                'VLR_PARCELA',
+                'PROP_IN_PARCELA',
+            ])
+            ->where([
+                ['PROP_IN_CODIGO', $idVenda],
+                ['PROP_IN_SEQUENCIA', $propInSequencia],
+            ])
+            ->first();
+
+        if (! $parcela) {
+            return false;
+        }
+
+        return self::connection()
+            ->table('bild.CLI_PROPOSTA_SYS')
+            ->insert([
+                'PROP_IN_CODIGO' => $parcela->prop_in_codigo,
+                'DOCUMENTO' => $parcela->documento,
+                'EST_IN_CODIGO' => $parcela->est_in_codigo,
+                'PROP_VENCTO' => $vencimento,
+                'VLR_PARCELA' => $parcela->vlr_parcela,
+                'PROP_IN_PARCELA' => $parcela->prop_in_parcela,
+            ]);
+    }
+
+    public static function atualizaParcela(int $idVenda, int $propInSequencia, array $columns): bool
+    {
+        return self::connection()
+            ->table('bild.CLI_PROPOSTA_SYS')
+            ->where([
+                ['PROP_IN_CODIGO', $idVenda],
+                ['PROP_IN_SEQUENCIA', $propInSequencia],
+            ])
+            ->update($columns);
+    }
+
+    public static function proximaParcelaMegaFinnet(int $idVenda): ?object
+    {
+        return self::connection()
+            ->table('bild.CLI_PROPOSTA_SYS')
+            ->selectRaw('MAX(PROP_IN_PARCELA) +1 AS NUM_PROXIMA_PARCELA')
+            ->where('PROP_IN_CODIGO', $idVenda)
+            ->first();
+    }
+
+    public static function getSequenciaParcelaAtualizada(int $idVenda, int $propInSequencia): ?object
+    {
+        return self::connection()
+            ->table('bild.cli_proposta_sys p')
+            ->select([
+                'p2.prop_in_sequencia',
+            ])
+            ->join('bild.cli_proposta_sys p2', function (JoinClause $query) {
+                $query->on('p2.prop_in_codigo', '=', 'p.prop_in_codigo')
+                    ->on('p2.vlr_parcela', '=', 'p.vlr_parcela')
+                    ->on('p2.prop_in_parcela', '=', 'p.prop_in_parcela')
+                    ->on('p2.documento', '=', 'p.documento')
+                    ->on('p2.est_in_codigo', '=', 'p.est_in_codigo')
+                    ->on('p2.status', '!=', 'p.status');
+            })
+            ->where([
+                ['p.prop_in_codigo', $idVenda],
+                ['p.prop_in_sequencia', $propInSequencia],
+            ])
+            ->first();
+    }
+
+    public static function atualizaParcelas(
+        int $idVenda,
+        int $numeroParcela,
+        string $vencimentoEn,
+        string $documentoHash,
+        string $arquivoBase64,
+        string $mensagem,
+        string $status,
+        array $pix = []): void
+    {
+        $lengthSize = 30_000;
+        $arquivoBase64_1 = substr($arquivoBase64, 0, $lengthSize);
+        $arquivoBase64_2 = substr($arquivoBase64, 30_000, $lengthSize);
+        $arquivoBase64_3 = substr($arquivoBase64, 60_000, $lengthSize);
+        $arquivoBase64_4 = substr($arquivoBase64, 90_000, $lengthSize);
+        $arquivoBase64_5 = substr($arquivoBase64, 120_000, $lengthSize);
+        $arquivoBase64_6 = substr($arquivoBase64, 150_000, $lengthSize);
+        $arquivoBase64_7 = substr($arquivoBase64, 180_000, $lengthSize);
+        $arquivoBase64_8 = substr($arquivoBase64, 210_000, $lengthSize);
+        $arquivoBase64_9 = substr($arquivoBase64, 240_000, $lengthSize);
+        $arquivoBase64_10 = substr($arquivoBase64, 270_000, $lengthSize);
+        $arquivoBase64_11 = substr($arquivoBase64, 300_000, $lengthSize);
+
+        $qrcode = $pix['qr_code'] ?? null;
+        $txId = $pix['tx_id'] ?? null;
+        $emv = $pix['emv'] ?? null;
+
+        $pdo = self::connection()->getPdo();
+        $stmt = $pdo->prepare('
+            BEGIN
+                bild.pck_bld_integracao_orcl.fnc_bld_ret_api_sys(
+                    :idVenda,
+                    :numeroParcela,
+                    :vencimentoEn,
+                    :documentoHash,
+                    TO_CLOB(:arquivoBase64_1),
+                    TO_CLOB(:arquivoBase64_2),
+                    TO_CLOB(:arquivoBase64_3),
+                    TO_CLOB(:arquivoBase64_4),
+                    TO_CLOB(:arquivoBase64_5),
+                    TO_CLOB(:arquivoBase64_6),
+                    TO_CLOB(:arquivoBase64_7),
+                    TO_CLOB(:arquivoBase64_8),
+                    TO_CLOB(:arquivoBase64_9),
+                    TO_CLOB(:arquivoBase64_10),
+                    TO_CLOB(:arquivoBase64_11),
+                    :mensagem,
+                    :status,
+                    :qrcode,
+                    :txId,
+                    :emv
+                );
+            END;
+        ');
+
+        $stmt->bindParam(':idVenda', $idVenda, PDO::PARAM_INT);
+        $stmt->bindParam(':numeroParcela', $numeroParcela, PDO::PARAM_INT);
+        $stmt->bindParam(':vencimentoEn', $vencimentoEn, PDO::PARAM_STR);
+        $stmt->bindParam(':documentoHash', $documentoHash, PDO::PARAM_STR);
+        $stmt->bindParam(':arquivoBase64_1', $arquivoBase64_1, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_2', $arquivoBase64_2, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_3', $arquivoBase64_3, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_4', $arquivoBase64_4, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_5', $arquivoBase64_5, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_6', $arquivoBase64_6, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_7', $arquivoBase64_7, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_8', $arquivoBase64_8, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_9', $arquivoBase64_9, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_10', $arquivoBase64_10, PDO::PARAM_LOB);
+        $stmt->bindParam(':arquivoBase64_11', $arquivoBase64_11, PDO::PARAM_LOB);
+        $stmt->bindParam(':mensagem', $mensagem, PDO::PARAM_STR);
+        $stmt->bindParam(':status', $status, PDO::PARAM_STR);
+
+        if ($qrcode === null) {
+            $stmt->bindParam(':qrcode', $qrcode, PDO::PARAM_NULL);
+        } else {
+            $stmt->bindParam(':qrcode', $qrcode, PDO::PARAM_STR);
+        }
+
+        if ($txId === null) {
+            $stmt->bindParam(':txId', $txId, PDO::PARAM_NULL);
+        } else {
+            $stmt->bindParam(':txId', $txId, PDO::PARAM_STR);
+        }
+
+        if ($emv === null) {
+            $stmt->bindParam(':emv', $emv, PDO::PARAM_NULL);
+        } else {
+            $stmt->bindParam(':emv', $emv, PDO::PARAM_STR);
+        }
+
+        $stmt->execute();
+    }
+
+    public static function executaProcedureParcelaFinnet(int $idVenda): void
+    {
+        $pdo = self::connection()->getPdo();
+        $stmt = $pdo->prepare(
+            'BEGIN
+                bild.pck_bld_integracao_orcl.f_json_sys(:idVenda);
+            END;'
+        );
+
+        $stmt->bindParam(':idVenda', $idVenda, PDO::PARAM_INT);
+
+        $stmt->execute();
+    }
+
+    public static function listarAgenteFinanceiro(int $codFilialMega): SupportCollection
+    {
+        return self::connection()
+            ->table(DB::raw('
+                bild.GLO_CONTASFIN A,
+                bild.GLO_CONTAS_ORG B,
+                bild.GLO_AGENTES C
+           '))
+            ->select([
+                'C.AGN_IN_CODIGO',
+                'C.AGN_ST_FANTASIA',
+                'A.BAN_IN_NUMERO',
+                'A.CTA_ST_NUMERO',
+            ])
+            ->where([
+                ['C.AGN_ST_FANTASIA', 'NOT LIKE', '%APLICACAO%'],
+                ['C.AGN_ST_FANTASIA', 'NOT LIKE', '%INATIVA%'],
+                ['B.ORG_TAB_IN_CODIGO', 53],
+                ['B.ORG_PAD_IN_CODIGO', 1],
+                ['B.ORG_TAU_ST_CODIGO', 'G'],
+                ['B.ORG_IN_CODIGO', $codFilialMega],
+            ])
+            ->whereColumn([
+                ['A.AGN_IN_CODIGO', 'B.AGN_IN_CODIGO'],
+                ['A.AGN_PAD_IN_CODIGO', 'B.AGN_PAD_IN_CODIGO'],
+                ['A.AGN_TAB_IN_CODIGO', 'B.AGN_TAB_IN_CODIGO'],
+                ['A.AGN_IN_CODIGO', 'C.AGN_IN_CODIGO'],
+                ['A.AGN_PAD_IN_CODIGO', 'C.AGN_PAD_IN_CODIGO'],
+                ['A.AGN_TAB_IN_CODIGO', 'C.AGN_TAB_IN_CODIGO'],
+            ])
+            ->orderBy('C.AGN_ST_FANTASIA')
+            ->get();
     }
 }
