@@ -113,9 +113,8 @@ class Mega
         $data['data_base'] = $data_base;
 
         if (array_key_exists('dt_movimento', $data)) {
-            $dt_movimento = Carbon::parse($data['dt_movimento'])->format('d/m/Y');
-            $data['dt_movimento'] = $dt_movimento;
-            $query .= 'and vbo.par_dt_movimento = :dt_movimento ';
+            $data['dt_movimento'] = Carbon::parse($data['dt_movimento'])->format('d/m/Y');
+            $query .= "and vbo.par_dt_movimento = to_date(:dt_movimento, 'dd/mm/yyyy') - 1 ";
         }
 
         if (array_key_exists('est_in_codigo', $data) && $data['est_in_codigo'] != '0') {
