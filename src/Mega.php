@@ -101,7 +101,6 @@ class Mega
             and vbo.org_tau_st_codigo   = qry_par.org_tau_st_codigo (+)
             and vbo.cto_in_codigo       = qry_par.cto_in_codigo     (+)
             and vbo.par_in_codigo       = qry_par.par_in_codigo     (+)
-            and vbo.par_dt_movimento    = " . $data_base . "
         ";
 
         if (array_key_exists('data_base', $data)) {
@@ -111,11 +110,13 @@ class Mega
             $data_base = Carbon::parse($data_base)->format('d/m/Y');
         }
 
+        $data['data_base'] = $data_base;
+
         if (array_key_exists('dt_movimento', $data)) {
+            $dt_movimento = Carbon::parse($data['dt_movimento'])->format('d/m/Y');
+            $data['dt_movimento'] = $dt_movimento;
             $query .= 'and vbo.par_dt_movimento = :dt_movimento ';
         }
-
-        $data['data_base'] = $data_base;
 
         if (array_key_exists('est_in_codigo', $data) && $data['est_in_codigo'] != '0') {
             $query .= 'and vbo.codigo_exporta = :est_in_codigo ';
