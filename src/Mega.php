@@ -48,6 +48,7 @@ class Mega
      *
      * $data deve conter os seguintes campos:
      * - data_base: Data base no formato 'd/m/Y' (opcional, se não for passado, será utilizado a data atual)
+     * - dt_movimento: Data do movimento no formato 'd/m/Y' (opcional, se não for passado, será considerado '0')
      * - est_in_codigo: Código do empreendimento (opcional, se não for passado, será considerado '0')
      * - document: CPF ou CNPJ do cliente (opcional, se não for passado, será considerado '0') passar ele formatado com máscara, ex: 123.456.789-00 ou 12.345.678/0001-00
      */
@@ -92,21 +93,26 @@ class Mega
                         bild.adt_ocorrencia  aoc
                     where cpa.ado_in_ocorrencia = aoc.ado_in_ocorrencia
                     and aoc.ado_ch_operacao       in ('I','U')
-                    and trunc(aoc.ado_dt_inclusao) = ".$data_base.'
+                    and trunc(aoc.ado_dt_inclusao) = " . $data_base . "
                 )  qry_par
             where vbo.org_tab_in_codigo = qry_par.org_tab_in_codigo (+)
-            and vbo.org_pad_in_codigo = qry_par.org_pad_in_codigo (+)
-            and vbo.org_in_codigo     = qry_par.org_in_codigo     (+)
-            and vbo.org_tau_st_codigo = qry_par.org_tau_st_codigo (+)
-            and vbo.cto_in_codigo     = qry_par.cto_in_codigo     (+)
-            and vbo.par_in_codigo     = qry_par.par_in_codigo     (+)
-        ';
+            and vbo.org_pad_in_codigo   = qry_par.org_pad_in_codigo (+)
+            and vbo.org_in_codigo       = qry_par.org_in_codigo     (+)
+            and vbo.org_tau_st_codigo   = qry_par.org_tau_st_codigo (+)
+            and vbo.cto_in_codigo       = qry_par.cto_in_codigo     (+)
+            and vbo.par_in_codigo       = qry_par.par_in_codigo     (+)
+            and vbo.par_dt_movimento    = " . $data_base . "
+        ";
 
         if (array_key_exists('data_base', $data)) {
             $data_base = Carbon::parse($data['data_base'])->format('d/m/Y');
         } else {
             $data_base = date('Y-m-d');
             $data_base = Carbon::parse($data_base)->format('d/m/Y');
+        }
+
+        if (array_key_exists('dt_movimento', $data)) {
+            $query .= 'and vbo.par_dt_movimento = :dt_movimento ';
         }
 
         $data['data_base'] = $data_base;
@@ -123,7 +129,7 @@ class Mega
             (array_key_exists('document', $data) && ($data['document'] == '0'))
             && (array_key_exists('est_in_codigo', $data) && ($data['est_in_codigo'] == '0'))
         ) {
-            $query .= " and (nvl(qry_par.parcela_alterada, 'N') = 'S' or trunc(vbo.cto_dt_status) = ".$data_base.')';
+            $query .= " and (nvl(qry_par.parcela_alterada, 'N') = 'S' or trunc(vbo.cto_dt_status) = " . $data_base . ')';
         }
 
         return self::connection()->select($query, $data);
@@ -916,8 +922,8 @@ class Mega
         string $valor,
         string $status,
         int $porcentagem,
-        string $dataImporta): void
-    {
+        string $dataImporta
+    ): void {
         self::connection()
             ->table('bild.ALX_CLIINTPROPTERMOPARC')
             ->insert([
@@ -947,8 +953,8 @@ class Mega
         string $juros,
         string $tipoJuro,
         string $vincula,
-        string $dataImporta): void
-    {
+        string $dataImporta
+    ): void {
         self::connection()
             ->table('bild.ALX_CLIINTPROPTERCOR')
             ->insert([
@@ -1091,8 +1097,8 @@ class Mega
         string $cpfVinculado,
         int $grau,
         string $percentual,
-        string $tipo): void
-    {
+        string $tipo
+    ): void {
         $pdo = self::connection()->getPdo();
         $stmt = $pdo->prepare('BEGIN
                 bild.PRC_BLD_ALL_RENDA_AVAL(
