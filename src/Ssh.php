@@ -9,27 +9,32 @@ use Psr\Log\LoggerInterface;
 
 class Ssh
 {
-    private static string $connectionName = 'mega';
+    private ?string $connectionName = null;
 
-    private static array $sshTunnelConfig;
+    private array $sshTunnelConfig;
 
-    public static function connection(string $connectionName): self
+    public function connection(string $connectionName): self
     {
-        self::$connectionName = $connectionName;
+        $this->connectionName = $connectionName;
 
-        return new self;
+        return $this;
     }
 
     /**
      * @throws Exception
      */
-    public static function connect(bool $debug = false): void
+    public function connect(bool $debug = false): void
     {
         $sshConfig = config('iss-satellite.ssh');
-        self::$sshTunnelConfig = $sshConfig[self::$connectionName];
+
+        if (! $this->connectionName) {
+            $this->getDefaultConnection();
+        }
+
+        $this->sshTunnelConfig = $sshConfig[$this->connectionName];
 
         if (! $sshConfig['host']) {
-            self::log()->error('No host for SSH was provided.');
+            $this->log()->error('No host for SSH was provided.');
 
             return;
         }
@@ -37,31 +42,31 @@ class Ssh
         $sshString = [
             'sshpass -p '.$sshConfig['password'],
             'ssh -o "StrictHostKeyChecking no" -f -N -L',
-            self::$sshTunnelConfig['tunnel_local_port'].':'.self::$sshTunnelConfig['tunnel'].':'.self::$sshTunnelConfig['tunnel_destination_port'],
+            $this->sshTunnelConfig['tunnel_local_port'].':'.$this->sshTunnelConfig['tunnel'].':'.$this->sshTunnelConfig['tunnel_destination_port'],
             $sshConfig['username'].'@'.$sshConfig['host'],
         ];
 
-        self::log()->info('Testing SSH connection to: '.self::$connectionName);
+        $this->log()->info('Testing SSH connection to: '.$this->connectionName);
 
-        $isConnected = self::isConnected($debug);
+        $isConnected = $this->isConnected($debug);
 
         if (! $isConnected) {
-            self::log()->info('Establishing SSH connection to: '.self::$connectionName);
+            $this->log()->info('Establishing SSH connection to: '.$this->connectionName);
 
             Process::run(implode(' ', $sshString))->output();
 
-            self::log()->info('SSH connection established to: '.self::$connectionName);
+            $this->log()->info('SSH connection established to: '.$this->connectionName);
         }
 
         if ($isConnected) {
-            self::log()->info('SSH is already connected to: '.self::$connectionName);
+            $this->log()->info('SSH is already connected to: '.$this->connectionName);
         }
     }
 
-    private static function isConnected(bool $debug): bool
+    private function isConnected(bool $debug): bool
     {
         try {
-            fsockopen('tcp://localhost', self::$sshTunnelConfig['tunnel_local_port']);
+            fsockopen('tcp://localhost', $this->sshTunnelConfig['tunnel_local_port']);
 
             return true;
         } catch (Exception $exception) {
@@ -73,7 +78,14 @@ class Ssh
         return false;
     }
 
-    public static function log(): LoggerInterface
+    private function getDefaultConnection(): void
+    {
+        $sshDefaultConnection = config('iss-satellite.ssh.default_connection');
+
+        $this->connectionName = $sshDefaultConnection;
+    }
+
+    public function log(): LoggerInterface
     {
         return Log::channel('stderr');
     }
