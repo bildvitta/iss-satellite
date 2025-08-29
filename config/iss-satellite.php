@@ -22,11 +22,13 @@ return [
             'max_name_len'   => env('MS_SATELLITE_MEGA_ORA_MAX_NAME_LEN', 30),
         ],
     ],
+
     'wscarteira' => [
         'wsdl'     => env('MS_SATELLITE_WSCARTEIRA_WSDL', ''),
         'login'    => env('MS_SATELLITE_WSCARTEIRA_LOGIN', ''),
         'password' => env('MS_SATELLITE_WSCARTEIRA_PASSWORD', ''),
     ],
+
     'finnet' => [
         'url'        => env('MS_SATELLITE_FINNET_URL', ''),
         'url_qrcode' => env('MS_SATELLITE_FINNET_URL_QRCODE', ''),
@@ -38,9 +40,12 @@ return [
         'username' => env('SSH_USERNAME'),
         'password' => env('SSH_PASSWORD'),
 
+        'default_connection' => env('SSH_DEFAULT_CONNECTION', 'mega'),
+
         'mega' => [
             'tunnel' => env('MEGA_TUNNEL'),
-            'tunnel_port' => env('MEGA_TUNNEL_PORT', 1521),
+            'tunnel_local_port' => env('MEGA_TUNNEL_LOCAL_PORT', 1521),
+            'tunnel_destination_port' => env('MEGA_TUNNEL_DESTINATION_PORT', 1521),
         ],
     ],
 ];
