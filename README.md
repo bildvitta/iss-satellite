@@ -9,6 +9,7 @@ This package allows Nave Servers to connect with this external services:
 - Mega
 - WSCarteira
 - Finnet
+- SSH
 
 ## Requirement: Oracle Instant Client + OCI8 PHP extension
 This package requires Oracle Instant Client oci8 PHP extension installed on your server for Mega operations
@@ -52,7 +53,7 @@ php artisan vendor:publish --tag="iss-satellite-config"
 ```
 
 ## Package Usage
-
+### Mega
 ```php
 // Mega direct DB Connection
 $query = Nave\Mega::connection()->select('select * from EXAMPLE');
@@ -64,6 +65,17 @@ $data = [
     'agn_st_nome' => 'João da Silva',
 ]
 $query = Nave\Mega::clientesSac($data);
+```
+
+### Ssh
+```php
+use Nave\IssSatellite\Facades\Ssh;
+
+// Connect to the default 'mega' connection
+Ssh::connect();
+
+// Or connect to a different connection
+Ssh::connection('my-other-connection')->connect();
 ```
 
 ## Changelog
