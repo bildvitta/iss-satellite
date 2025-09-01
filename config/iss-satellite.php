@@ -34,6 +34,12 @@ return [
         'url_qrcode' => env('MS_SATELLITE_FINNET_URL_QRCODE', ''),
     ],
 
+    'multidados' => [
+        'wsdl' => env('MS_SATELLITE_MULTDADDOS_WSDL', ''),
+        'username' => env('MS_SATELLITE_MULTDADDOS_USERNAME', ''),
+        'password' => env('MS_SATELLITE_MULTDADDOS_PASSWORD', ''),
+    ],
+
     'ssh' => [
         'host' => env('SSH_HOST'),
         'port' => env('SSH_PORT', 22),
