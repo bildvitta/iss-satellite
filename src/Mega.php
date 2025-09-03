@@ -937,6 +937,18 @@ class Mega
             ]);
     }
 
+    public static function hasPropostaPersonalizacaoMega(string $cpfCliente, string $codUnidade, string $codPropostaPersonalizacao): int
+    {
+        return self::connection()
+            ->table('bild.ALX_CLIINTPROPOSTATERMO')
+            ->where([
+                ['PROP_CLIENTE', $cpfCliente],
+                ['EST_IN_CODIGO', $codUnidade],
+                ['PROP_IN_PROP', $codPropostaPersonalizacao],
+            ])
+            ->count();
+    }
+
     public static function addParcelasMega(
         string $cpfCliente,
         string $codUnidade,
@@ -964,6 +976,14 @@ class Mega
                 'PROP_IN_PERC' => $porcentagem,
                 'PROP_DT_IMPORT' => DB::raw("TO_DATE('$dataImporta', 'YYYY-MM-DD HH24:MI:SS')"),
             ]);
+    }
+
+    public static function hasParcelasPersonalizacaoMega(int $codPropostaPersonalizacao): int
+    {
+        return self::connection()
+            ->table('bild.ALX_CLIINTPROPTERMOPARC')
+            ->where('prop_in_prop', $codPropostaPersonalizacao)
+            ->count();
     }
 
     public static function addParcelasCorrecaoMega(
