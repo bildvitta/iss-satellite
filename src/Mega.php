@@ -958,7 +958,7 @@ class Mega
         string $dataVencimento,
         string $valor,
         string $status,
-        int $porcentagem,
+        int|float $porcentagem,
         string $dataImporta
     ): void {
         self::connection()
