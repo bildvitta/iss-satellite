@@ -40,7 +40,9 @@ class Mega
      */
     public static function getPermutationSalesQuery(): Builder
     {
-        return self::connection()->table('bild.vw_bld_ono_parc_cli_sys_api')
+        return self::connection()
+            ->table('bild.vw_bld_ono_parc_cli_sys_api')
+            ->where('status_cto', '<>', 'D')
             ->orderBy('cod_contrato', 'desc');
     }
 
