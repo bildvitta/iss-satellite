@@ -42,7 +42,7 @@ class Mega
     {
         return self::connection()
             ->table('bild.vw_bld_ono_parc_cli_sys_api')
-            ->where('status_cto', '<>', 'D')
+            ->whereNotIn('status_cto', ['D', 'C', 'T'])
             ->orderBy('cod_contrato', 'desc');
     }
 
