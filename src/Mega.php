@@ -1410,4 +1410,15 @@ class Mega
             ->orderBy('C.AGN_ST_FANTASIA')
             ->get();
     }
+
+    public static function getCliente(int $codUnidade, string $cpf): SupportCollection
+    {
+        return self::connection()
+            ->table('bild.ALX_VIW_BLDALLAVRATST')
+            ->where([
+                'idunidade' => $codUnidade,
+                'documento' => $cpf,
+            ])
+            ->get();
+    }
 }
