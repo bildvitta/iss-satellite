@@ -939,7 +939,7 @@ class Mega
             ]);
     }
 
-    public static function hasPropostaPersonalizacaoMega(string $cpfCliente, string $codUnidade, string $codPropostaPersonalizacao): int
+    public static function hasPropostaPersonalizacaoMega(string $cpfCliente, string $codUnidade, string $codPropostaPersonalizacao, ?string $status = null): int
     {
         return self::connection()
             ->table('bild.ALX_CLIINTPROPOSTATERMO')
@@ -948,6 +948,9 @@ class Mega
                 ['EST_IN_CODIGO', $codUnidade],
                 ['PROP_IN_PROP', $codPropostaPersonalizacao],
             ])
+            ->when($status, function (OracleBuilder $query) use ($status) {
+                $query->where('PROP_CH_STATUS', $status);
+            })
             ->count();
     }
 
@@ -980,11 +983,19 @@ class Mega
             ]);
     }
 
-    public static function hasParcelasPersonalizacaoMega(int $codPropostaPersonalizacao): int
+    public static function hasParcelasPersonalizacaoMega(string $cpfCliente, int $codUnidade, int $codPropostaPersonalizacao, string $tipoParcela, ?string $status = null): int
     {
         return self::connection()
             ->table('bild.ALX_CLIINTPROPTERMOPARC')
-            ->where('prop_in_prop', $codPropostaPersonalizacao)
+            ->where([
+                ['prop_cliente', $cpfCliente],
+                ['est_in_codigo', $codUnidade],
+                ['prop_in_prop', $codPropostaPersonalizacao],
+                ['prop_ch_parc', $tipoParcela],
+            ])
+            ->when($status, function (OracleBuilder $query) use ($status) {
+                $query->where('PROP_CH_STATUS', $status);
+            })
             ->count();
     }
 
