@@ -54,4 +54,11 @@ return [
             'tunnel_destination_port' => env('MEGA_TUNNEL_DESTINATION_PORT', 1521),
         ],
     ],
+
+    'mega-cloud' => [
+        'url' => env('MEGA_CLOUD_URL', ''),
+        'prefix' => env('MEGA_CLOUD_URL_PREFIX', '/api'),
+        'username' => env('MEGA_CLOUD_USERNAME', ''),
+        'password' => env('MEGA_CLOUD_PASSWORD', ''),
+    ],
 ];
