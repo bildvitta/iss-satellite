@@ -11,9 +11,29 @@ use Illuminate\Support\Facades\Http;
 
 class MegaCloud
 {
+    private array $config = [];
+
+    public function setConnection(string $connection): self
+    {
+        $this->config = Config::get("iss-satellite.mega_cloud.$connection");
+
+        return $this;
+    }
+
+    private function getDefaultConnection(): void
+    {
+        $connectionName = Config::get('iss-satellite.mega_cloud.default_connection');
+
+        $this->setConnection($connectionName);
+    }
+
     private function prepareRequest(): PendingRequest
     {
-        return Http::baseUrl(Config::get('iss-satellite.mega-cloud.url').Config::get('iss-satellite.mega-cloud.prefix'))
+        if (! $this->config) {
+            $this->getDefaultConnection();
+        }
+
+        return Http::baseUrl("{$this->config['url']}{$this->config['prefix']}")
             ->withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
@@ -26,15 +46,15 @@ class MegaCloud
 
     private function getToken(): ?string
     {
-        $cacheKey = 'issMegaCloudToken';
+        $cacheKey = $this->config['cache_key'];
 
         if (Cache::has($cacheKey)) {
             return Cache::get($cacheKey);
         }
 
         $request = $this->prepareRequest()->post('/Auth/SignIn', [
-            'username' => Config::get('iss-satellite.mega-cloud.username'),
-            'password' => Config::get('iss-satellite.mega-cloud.password'),
+            'username' => $this->config['username'],
+            'password' => $this->config['password'],
         ])
             ->object();
 
@@ -92,7 +112,7 @@ class MegaCloud
         return $this->get("/globalestruturas/Empreendimentos/$realEstateDevelopmentId/Blocos")->collect();
     }
 
-    public function getRealEstateDevelopmentUnitsByBlock(string $realEstateDevelopmentId, int|string $blockId): Collection
+    public function getRealEstateDevelopmentUnitsByBlock(string $realEstateDevelopmentId, string $blockId): Collection
     {
         return $this->get("/globalestruturas/Empreendimentos/$realEstateDevelopmentId/Blocos/$blockId/Unidades")->collect();
     }

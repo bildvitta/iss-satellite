@@ -53,12 +53,23 @@ return [
             'tunnel_local_port' => env('MEGA_TUNNEL_LOCAL_PORT', 1521),
             'tunnel_destination_port' => env('MEGA_TUNNEL_DESTINATION_PORT', 1521),
         ],
+
+        'mega_cloud_bild' => [
+            'tunnel' => env('BILD_MEGA_CLOUD_MEGA_TUNNEL'),
+            'tunnel_local_port' => env('BILD_MEGA_TUNNEL_LOCAL_PORT', 36700),
+            'tunnel_destination_port' => env('BILD_MEGA_TUNNEL_DESTINATION_PORT', 36700),
+        ],
     ],
 
-    'mega-cloud' => [
-        'url' => env('MEGA_CLOUD_URL', ''),
-        'prefix' => env('MEGA_CLOUD_URL_PREFIX', '/api'),
-        'username' => env('MEGA_CLOUD_USERNAME', ''),
-        'password' => env('MEGA_CLOUD_PASSWORD', ''),
+    'mega_cloud' => [
+        'default_connection' => env('MEGA_CLOUD_DEFAULT_CONNECTION', 'bild'),
+
+        'bild' => [
+            'url' => env('BILD_MEGA_CLOUD_URL', 'http://127.0.0.1:36700'),
+            'prefix' => env('BILD_MEGA_CLOUD_URL_PREFIX', '/api'),
+            'username' => env('BILD_MEGA_CLOUD_USERNAME', ''),
+            'password' => env('BILD_MEGA_CLOUD_PASSWORD', ''),
+            'cache_key' => env('BILD_MEGA_CLOUD_CACHE_KEY', 'bildIssMegaCloudToken'),
+        ],
     ],
 ];

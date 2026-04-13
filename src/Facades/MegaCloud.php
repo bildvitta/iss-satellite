@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static Collection<\Nave\IssSatellite\MegaCloud> getRealEstateDevelopmentUnitsByBlock(string $realEstateDevelopmentId, string $blockId)
  * @method static Collection<\Nave\IssSatellite\MegaCloud> getRealEstateDevelopmentsWithBlocksAndUnits(array $query)
  * @method static Collection<\Nave\IssSatellite\MegaCloud> getAllRealEstateDevelopmentUnits(array $query)
+ * @method static self<\Nave\IssSatellite\MegaCloud> setConnection(string $connection)
  * @see \Nave\IssSatellite\MegaCloud
  */
 class MegaCloud extends Facade
