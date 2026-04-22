@@ -33,14 +33,17 @@ class MegaCloud
             $this->getDefaultConnection();
         }
 
+        $connectTimeout = Config::get('iss-satellite.mega_cloud.connect_timeout');
+        $timeout = Config::get('iss-satellite.mega_cloud.timeout');
+
         return Http::baseUrl("{$this->config['url']}{$this->config['prefix']}")
             ->withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
             ])
-            ->connectTimeout(60)
-            ->timeout(60)
-            ->retry(3, 300)
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout)
+            ->retry(3, 500)
             ->throw();
     }
 
