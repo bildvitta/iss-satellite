@@ -78,6 +78,62 @@ Ssh::connect();
 Ssh::connection('my-other-connection')->connect();
 ```
 
+### Mega Cloud
+#### Config
+```php
+'ssh' => [
+    'mega_cloud_bild' => [
+        'tunnel' => env('BILD_MEGA_CLOUD_MEGA_TUNNEL'),
+        'tunnel_local_port' => env('BILD_MEGA_TUNNEL_LOCAL_PORT', 36700),
+        'tunnel_destination_port' => env('BILD_MEGA_TUNNEL_DESTINATION_PORT', 36700),
+    ],
+
+  // Caso exista outra empresa usando o mega cloud através de vpn      
+  'mega_cloud_xxx' => [    
+      'tunnel' => env('XXX_MEGA_CLOUD_MEGA_TUNNEL'),
+      'tunnel_local_port' => env('XXX_MEGA_TUNNEL_LOCAL_PORT', ''),
+      'tunnel_destination_port' => env('XXX_MEGA_TUNNEL_DESTINATION_PORT', ''),
+  ],
+],
+
+'mega_cloud' => [    
+      'default_connection' => env('MEGA_CLOUD_DEFAULT_CONNECTION', 'bild'),
+      'connect_timeout' => env('MEGA_CLOUD_CONNECTION_TIMEOUT', 120),
+      'timeout' => env('MEGA_CLOUD_TIMEOUT', 120),
+
+      'bild' => [
+          'url' => env('BILD_MEGA_CLOUD_URL', 'http://127.0.0.1:36700'),
+          'prefix' => env('BILD_MEGA_CLOUD_URL_PREFIX', '/api'),
+          'username' => env('BILD_MEGA_CLOUD_USERNAME', ''),
+          'password' => env('BILD_MEGA_CLOUD_PASSWORD', ''),
+          'cache_key' => env('BILD_MEGA_CLOUD_CACHE_KEY', 'bildIssMegaCloudToken'),
+      ],
+      
+      // Configuração adicional para outra empresa usando mega cloud
+      'xxx' => [
+          'url' => env('XXX_MEGA_CLOUD_URL', '127.0.0.1'),
+          'prefix' => env('XXX_MEGA_CLOUD_URL_PREFIX', '/api'),
+          'username' => env('XXX_MEGA_CLOUD_USERNAME', ''),
+          'password' => env('XXX_MEGA_CLOUD_PASSWORD', ''),
+          'cache_key' => env('XXX_MEGA_CLOUD_CACHE_KEY', 'terreIssMegaCloudToken'),
+      ],
+],
+```
+#### How to use
+```php
+use Nave\IssSatellite\Facades\MegaCloud as MegaCloudFacade;
+use Nave\IssSatellite\Facades\Ssh;
+
+Ssh::connection('mega_cloud_bild')->connect();
+
+// O método setConnection() só será necessário caso queira passar outra conexão, do contrário o padrão será puxado da config iss-satellite.mega_cloud.default_connection
+MegaCloudFacade::setConnection('bild')->getAllRealEstateDevelopmentUnits([
+        'filial' => 103442,
+    ])
+        ->where('status', 'VENDIDA')
+        ->values();
+```
+
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
