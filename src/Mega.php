@@ -380,7 +380,7 @@ class Mega
     public static function extratoFinanceiro($data): array
     {
         $data['date'] = date('Y-m-d');
-        $$data['seq'] = 1;
+        $data['seq'] = 1;
 
         $query = 'begin
             bild.alx_pck_bldapp.fnc_bld_app_parcela (:organizacao
@@ -1431,5 +1431,52 @@ class Mega
                 'documento' => $cpf,
             ])
             ->get();
+    }
+
+    private static function formatSqlForEfetivacao(array $data): string
+    {
+        $sql = '';
+        $total = count($data);
+        $increment = 0;
+
+        foreach ($data as $key => $value) {
+            $increment++;
+
+            $sql .= "{$key} => '{$value}'";
+
+            if ($increment !== $total) {
+                $sql .= ',';
+            }
+        }
+
+        return $sql;
+    }
+
+    public static function executaProcedureEfetivacao(array $data): void
+    {
+        $sql = self::formatSqlForEfetivacao($data);
+        $pdo = self::connection()->getPdo();
+        $stmt = $pdo->prepare(
+            "BEGIN
+                bild.pck_bld_importa_proposta.prc_car_importa_proposta($sql);
+            END;"
+        );
+
+        $stmt->execute();
+    }
+
+    public static function insertLogEfetivacao(int $codProposta, string $documento, array $data): void
+    {
+        $sql = self::formatSqlForEfetivacao($data);
+        $sqlQueryLog = "BEGIN bild.pck_bld_importa_proposta.prc_car_importa_proposta($sql); END;";
+
+        self::connection()
+            ->table('bild.cli_log_wscarteira')
+            ->insert([
+                'prop_in_codigo' => $codProposta,
+                'documento' => $documento,
+                'payload' => $sqlQueryLog,
+                'dt_processamento' => now('America/Sao_Paulo')->toDateTimeString(),
+            ]);
     }
 }
