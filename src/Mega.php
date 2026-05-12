@@ -939,15 +939,23 @@ class Mega
             ]);
     }
 
-    public static function hasPropostaPersonalizacaoMega(string $cpfCliente, string $codUnidade, string $codPropostaPersonalizacao, ?string $status = null): int
-    {
+    public static function hasPropostaMega(
+        string $cpfCliente,
+        string $codUnidade,
+        string $codProposta,
+        ?int $codTermo = null,
+        ?string $status = null
+    ): int {
         return self::connection()
             ->table('bild.ALX_CLIINTPROPOSTATERMO')
             ->where([
                 ['PROP_CLIENTE', $cpfCliente],
                 ['EST_IN_CODIGO', $codUnidade],
-                ['PROP_IN_PROP', $codPropostaPersonalizacao],
+                ['PROP_IN_PROP', $codProposta],
             ])
+            ->when($codTermo, function (OracleBuilder $query) use ($codTermo) {
+                $query->where('TER_IN_CODIGO', $codTermo);
+            })
             ->when($status, function (OracleBuilder $query) use ($status) {
                 $query->where('PROP_CH_STATUS', $status);
             })
@@ -983,16 +991,37 @@ class Mega
             ]);
     }
 
-    public static function hasParcelasPersonalizacaoMega(string $cpfCliente, int $codUnidade, int $codPropostaPersonalizacao, string $tipoParcela, ?string $status = null): int
-    {
+    public static function hasParcelasMega(
+        string $cpfCliente,
+        int $codUnidade,
+        int $codProposta,
+        string $tipoParcela,
+        int|float|null $porcentagem = null,
+        ?int $numeroParcela = null,
+        ?string $dataVencimento = null,
+        ?string $valor = null,
+        ?string $status = null
+    ): int {
         return self::connection()
             ->table('bild.ALX_CLIINTPROPTERMOPARC')
             ->where([
                 ['prop_cliente', $cpfCliente],
                 ['est_in_codigo', $codUnidade],
-                ['prop_in_prop', $codPropostaPersonalizacao],
+                ['prop_in_prop', $codProposta],
                 ['prop_ch_parc', $tipoParcela],
             ])
+            ->when($dataVencimento, function (OracleBuilder $query) use ($dataVencimento) {
+                $query->where('PROP_DT_VENCTO', DB::raw("TO_DATE('$dataVencimento', 'DD/MM/YYYY')"));
+            })
+            ->when($porcentagem, function (OracleBuilder $query) use ($porcentagem) {
+                $query->where('PROP_IN_PERC', $porcentagem);
+            })
+            ->when($numeroParcela, function (OracleBuilder $query) use ($numeroParcela) {
+                $query->where('PROP_IN_PARC', $numeroParcela);
+            })
+            ->when($valor, function (OracleBuilder $query) use ($valor) {
+                $query->where('PROP_RE_VALOR', $valor);
+            })
             ->when($status, function (OracleBuilder $query) use ($status) {
                 $query->where('PROP_CH_STATUS', $status);
             })
@@ -1029,6 +1058,53 @@ class Mega
                 'PROP_CH_VINC' => $vincula,
                 'PROP_DT_IMPORT' => DB::raw("TO_DATE('$dataImporta', 'YYYY-MM-DD HH24:MI:SS')"),
             ]);
+    }
+
+    public static function hasParcelasCorrecaoMega(
+        string $cpfCliente,
+        int $codUnidade,
+        int $codProposta,
+        ?int $numeroParcela = null,
+        ?int $indice = null,
+        ?string $dataVigencia = null,
+        ?int $defasagem = null,
+        ?string $reajuste = null,
+        ?string $juros = null,
+        ?string $tipoJuro = null,
+        ?string $vincula = null,
+    ): int {
+        return self::connection()
+            ->table('bild.ALX_CLIINTPROPTERCOR')
+            ->where([
+                ['prop_cliente', $cpfCliente],
+                ['est_in_codigo', $codUnidade],
+                ['prop_in_prop', $codProposta],
+            ])
+            ->when($numeroParcela, function (OracleBuilder $query) use ($numeroParcela) {
+                $query->where('PROP_IN_PARC', $numeroParcela);
+            })
+            ->when($indice, function (OracleBuilder $query) use ($indice) {
+                $query->where('PROP_IN_INDICE', $indice);
+            })
+            ->when($dataVigencia, function (OracleBuilder $query) use ($dataVigencia) {
+                $query->where('PROP_DT_VIGEN', DB::raw("TO_DATE('$dataVigencia', 'DD/MM/YYYY')"));
+            })
+            ->when($defasagem, function (OracleBuilder $query) use ($defasagem) {
+                $query->where('PROP_IN_DEFAS', $defasagem);
+            })
+            ->when($reajuste, function (OracleBuilder $query) use ($reajuste) {
+                $query->where('PROP_CH_JUROS', $reajuste);
+            })
+            ->when($juros, function (OracleBuilder $query) use ($juros) {
+                $query->where('PROP_RE_JUROS', $juros);
+            })
+            ->when($tipoJuro, function (OracleBuilder $query) use ($tipoJuro) {
+                $query->where('PROP_CH_TPJUR', $tipoJuro);
+            })
+            ->when($vincula, function (OracleBuilder $query) use ($vincula) {
+                $query->where('PROP_CH_VINC', $vincula);
+            })
+            ->count();
     }
 
     public static function finalizacaoMega(int $codigoMega, string $dataIntegracao, string $codProposta): void
