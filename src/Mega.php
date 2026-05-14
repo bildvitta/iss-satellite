@@ -7,6 +7,7 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use PDO;
 use Yajra\Oci8\Query\OracleBuilder;
 
@@ -1543,8 +1544,11 @@ class Mega
 
     public static function insertLogEfetivacao(int $codProposta, string $documento, array $data): void
     {
-        $sql = self::formatSqlForEfetivacao($data);
-        $sqlQueryLog = "BEGIN bild.pck_bld_importa_proposta.prc_car_importa_proposta($sql); END;";
+        $sqlFormated = Str::of(self::formatSqlForEfetivacao($data))
+            ->explode(',')
+            ->implode(",\n\t");
+
+        $sqlQueryLog = "BEGIN \n\tbild.pck_bld_importa_proposta.prc_car_importa_proposta(\n\t$sqlFormated\n); \nEND;";
 
         self::connection()
             ->table('bild.cli_log_wscarteira')
