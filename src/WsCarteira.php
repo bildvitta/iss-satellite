@@ -409,14 +409,14 @@ class WsCarteira
         $neighborhood = self::abbreviateAddress($neighborhood, $neighborhoodLength);
 
         return [
-            'logradouro' => $street,
-            'numero' => $number,
+            'logradouro'  => $street,
+            'numero'      => $number,
             'complemento' => $complement,
-            'bairro' => $neighborhood,
-            'cidade' => self::sanitizeString($city),
-            'uf' => $state,
-            'cep' => $postalCode,
-            'pais' => $countryAbbreviation,
+            'bairro'      => $neighborhood,
+            'cidade'      => self::sanitizeString($city),
+            'uf'          => $state,
+            'cep'         => $postalCode,
+            'pais'        => $countryAbbreviation,
         ];
     }
 }

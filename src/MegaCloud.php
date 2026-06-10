@@ -38,7 +38,7 @@ class MegaCloud
 
         return Http::baseUrl("{$this->config['url']}{$this->config['prefix']}")
             ->withHeaders([
-                'Accept' => 'application/json',
+                'Accept'       => 'application/json',
                 'Content-Type' => 'application/json',
             ])
             ->connectTimeout($connectTimeout)
@@ -124,25 +124,25 @@ class MegaCloud
     {
         return $this->getRealEstateDevelopments($query)->map(function (array $realEstateDevelopment) {
             return collect([
-                'id' => $realEstateDevelopment['id'],
-                'codigo' => $realEstateDevelopment['codigo'],
+                'id'           => $realEstateDevelopment['id'],
+                'codigo'       => $realEstateDevelopment['codigo'],
                 'codigoFilial' => $realEstateDevelopment['codigoFilial'],
-                'nome' => $realEstateDevelopment['nome'],
-                'blocks' => $this->getRealEstateDevelopmentBlocks($realEstateDevelopment['id'])->map(function (array $block) use ($realEstateDevelopment) {
+                'nome'         => $realEstateDevelopment['nome'],
+                'blocks'       => $this->getRealEstateDevelopmentBlocks($realEstateDevelopment['id'])->map(function (array $block) use ($realEstateDevelopment) {
                     return collect([
-                        'id' => $block['id'],
-                        'codigo' => $block['codigo'],
+                        'id'           => $block['id'],
+                        'codigo'       => $block['codigo'],
                         'codigoFilial' => $block['codigoFilial'],
-                        'nome' => $block['nome'],
-                        'units' => $this->getRealEstateDevelopmentUnitsByBlock($realEstateDevelopment['id'], $block['id'])->map(function (array $unit) use ($block, $realEstateDevelopment) {
+                        'nome'         => $block['nome'],
+                        'units'        => $this->getRealEstateDevelopmentUnitsByBlock($realEstateDevelopment['id'], $block['id'])->map(function (array $unit) use ($block, $realEstateDevelopment) {
                             return collect([
-                                'id' => $unit['id'],
+                                'id'                      => $unit['id'],
                                 'realEstateDevelopmentId' => $realEstateDevelopment['id'],
-                                'blockId' => $block['id'],
-                                'codigo' => $unit['codigo'],
-                                'codigoExterno' => $unit['codigoExterno'],
-                                'nome' => $unit['nome'],
-                                'status' => $unit['status'],
+                                'blockId'                 => $block['id'],
+                                'codigo'                  => $unit['codigo'],
+                                'codigoExterno'           => $unit['codigoExterno'],
+                                'nome'                    => $unit['nome'],
+                                'status'                  => $unit['status'],
                             ]);
                         }),
                     ]);

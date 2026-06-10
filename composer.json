@@ -1,17 +1,17 @@
 {
-    "name": "bildvitta/iss-satellite",
+    "name": "appnave/nave-satellite-iss",
     "description": "This is my package iss-satellite",
     "keywords": [
         "Nave",
         "laravel",
         "iss-satellite"
     ],
-    "homepage": "https://github.com/bildvitta/iss-satellite",
+    "homepage": "https://github.com/appnave/nave-satellite-iss",
     "license": "MIT",
     "authors": [
         {
             "name": "Nave",
-            "email": "nave@nave.app.br",
+            "email": "contato@nave.app.br",
             "role": "Developer"
         }
     ],
@@ -52,7 +52,8 @@
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
-        "format": "vendor/bin/pint"
+        "test:format": "vendor/bin/pint --test",
+        "format": "vendor/bin/pint --parallel"
     },
     "config": {
         "sort-packages": true,
