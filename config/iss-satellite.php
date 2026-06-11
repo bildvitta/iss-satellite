@@ -6,12 +6,15 @@ return [
         'db' => [
             'driver'         => 'oracle',
             'tns'            => env('MS_SATELLITE_MEGA_DB_TNS', ''),
-            'host'           => env('MS_SATELLITE_MEGA_DB_HOST', ''),
-            'port'           => env('MS_SATELLITE_MEGA_DB_PORT', '1521'),
-            'database'       => env('MS_SATELLITE_MEGA_DB_DATABASE', ''),
-            'service_name'   => env('MS_SATELLITE_MEGA_DB_DATABASE', ''),
-            'username'       => env('MS_SATELLITE_MEGA_DB_USERNAME', ''),
-            'password'       => env('MS_SATELLITE_MEGA_DB_PASSWORD', ''),
+
+            // As variáveis serão passadas dinâmicamente
+            // 'host'           => env('MS_SATELLITE_MEGA_DB_HOST', ''),
+            // 'port'           => env('MS_SATELLITE_MEGA_DB_PORT', '1521'),
+            // 'database'       => env('MS_SATELLITE_MEGA_DB_DATABASE', ''),
+            // 'service_name'   => env('MS_SATELLITE_MEGA_DB_DATABASE', ''),
+            // 'username'       => env('MS_SATELLITE_MEGA_DB_USERNAME', ''),
+            // 'password'       => env('MS_SATELLITE_MEGA_DB_PASSWORD', ''),
+
             'charset'        => env('MS_SATELLITE_MEGA_DB_CHARSET', 'AL32UTF8'),
             'prefix'         => env('MS_SATELLITE_MEGA_DB_PREFIX', ''),
             'prefix_schema'  => env('MS_SATELLITE_MEGA_DB_SCHEMA_PREFIX', ''),
@@ -38,27 +41,6 @@ return [
         'wsdl' => env('MS_SATELLITE_MULTDADDOS_WSDL', ''),
         'username' => env('MS_SATELLITE_MULTDADDOS_USERNAME', ''),
         'password' => env('MS_SATELLITE_MULTDADDOS_PASSWORD', ''),
-    ],
-
-    'ssh' => [
-        'host' => env('SSH_HOST'),
-        'port' => env('SSH_PORT', 22),
-        'username' => env('SSH_USERNAME'),
-        'password' => env('SSH_PASSWORD'),
-
-        'default_connection' => env('SSH_DEFAULT_CONNECTION', 'mega'),
-
-        'mega' => [
-            'tunnel' => env('MEGA_TUNNEL'),
-            'tunnel_local_port' => env('MEGA_TUNNEL_LOCAL_PORT', 1521),
-            'tunnel_destination_port' => env('MEGA_TUNNEL_DESTINATION_PORT', 1521),
-        ],
-
-        'mega_cloud_bild' => [
-            'tunnel' => env('BILD_MEGA_CLOUD_MEGA_TUNNEL'),
-            'tunnel_local_port' => env('BILD_MEGA_TUNNEL_LOCAL_PORT', 36700),
-            'tunnel_destination_port' => env('BILD_MEGA_TUNNEL_DESTINATION_PORT', 36700),
-        ],
     ],
 
     'mega_cloud' => [
