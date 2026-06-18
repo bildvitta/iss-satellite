@@ -26,11 +26,6 @@ return [
         ],
     ],
 
-    'finnet' => [
-        'url'        => env('MS_SATELLITE_FINNET_URL', ''),
-        'url_qrcode' => env('MS_SATELLITE_FINNET_URL_QRCODE', ''),
-    ],
-
     'multidados' => [
         'wsdl' => env('MS_SATELLITE_MULTDADDOS_WSDL', ''),
         'username' => env('MS_SATELLITE_MULTDADDOS_USERNAME', ''),
