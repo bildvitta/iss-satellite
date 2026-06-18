@@ -26,12 +26,6 @@ return [
         ],
     ],
 
-    'multidados' => [
-        'wsdl' => env('MS_SATELLITE_MULTDADDOS_WSDL', ''),
-        'username' => env('MS_SATELLITE_MULTDADDOS_USERNAME', ''),
-        'password' => env('MS_SATELLITE_MULTDADDOS_PASSWORD', ''),
-    ],
-
     'mega_cloud' => [
         'default_connection' => env('MEGA_CLOUD_DEFAULT_CONNECTION', 'bild'),
         'connect_timeout' => env('MEGA_CLOUD_CONNECTION_TIMEOUT', 120),
