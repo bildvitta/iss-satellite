@@ -3,31 +3,22 @@
 namespace Nave\IssSatellite;
 
 use Illuminate\Support\Facades\Http;
-use Nave\IssSatellite\Enums\FinnetCallType;
 
 class Finnet
 {
-    public static function call(array $data = [], FinnetCallType $type = FinnetCallType::DEFAULT): array
-    {
-        switch ($type) {
-            case FinnetCallType::QRCODE:
-                $url = config('iss-satellite.finnet.qrcode_url');
-                break;
-            case FinnetCallType::DEFAULT:
-            default:
-                $url = config('iss-satellite.finnet.url');
-                break;
-        }
+    private static array $keysRequired = [
+        'URL',
+    ];
 
-        if (! $url) {
-            return [
-                'error'   => true,
-                'message' => __('Finnet url config not found'),
-            ];
+    public static function call(array $credentials, array $data = []): array
+    {
+        $validateCredentials = self::validateCredentials($credentials);
+        if ($validateCredentials['error'] === true) {
+            return $validateCredentials;
         }
 
         $response = Http::withHeaders(['Content-Type' => 'application/json'])
-            ->post($url, $data);
+            ->post($credentials['URL'], $data);
 
         if ($response->failed()) {
             return [
@@ -55,5 +46,31 @@ class Finnet
         $result['dados']['pagador_endereco_cidade'] = substr($result['dados']['pagador_endereco_cidade'], 0, 15);
 
         return $result;
+    }
+
+    private static function validateCredentials(array $credentials): array
+    {
+        $parameterKeys = array_keys($credentials);
+        $keysNotPresent = [];
+
+        foreach (self::$keysRequired as $keyRequired) {
+            if (! in_array($keyRequired, $parameterKeys)) {
+                $keysNotPresent[] = $keyRequired;
+            }
+        }
+
+        if ($keysNotPresent) {
+            $keysString = implode(',', $keysNotPresent);
+
+            return [
+                'error'   => true,
+                'message' => "The keys [$keysString] must be passed.",
+            ];
+        }
+
+        return [
+            'error'   => false,
+            'message' => null,
+        ];
     }
 }
