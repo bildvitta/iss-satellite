@@ -6,16 +6,20 @@ use SoapClient;
 
 class Multidados
 {
-    public static function call(string $call, array $data = []): array
+    private static array $keysRequired = [
+        'WSDL',
+        'USER',
+        'PASSWORD',
+    ];
+
+    public static function call(array $credentials, string $call, array $data = []): array
     {
-        if (! config('iss-satellite.multidados.wsdl')) {
-            return [
-                'error' => true,
-                'message' => 'Multidados WSDL config not found',
-            ];
+        $validateCredentials = self::validateCredentials($credentials);
+        if ($validateCredentials['error'] === true) {
+            return $validateCredentials;
         }
 
-        $soapClient = new SoapClient(config('iss-satellite.multidados.wsdl'), [
+        $soapClient = new SoapClient($credentials['WSDL'], [
             'encoding' => 'UTF-8',
             'trace' => 1,
             'exceptions' => 1,
@@ -29,8 +33,8 @@ class Multidados
         ]);
 
         $data = array_merge([
-            'USUARIO_WS' => config('iss-satellite.multidados.username'),
-            'SENHA_WS' => config('iss-satellite.multidados.password'),
+            'USUARIO_WS' => $credentials['USER'],
+            'SENHA_WS' => $credentials['PASSWORD'],
         ], $data);
 
         $soapCall = $soapClient->__soapCall($call, $data);
@@ -54,6 +58,32 @@ class Multidados
         return [
             'error' => true,
             'message' => $soapCall,
+        ];
+    }
+
+    private static function validateCredentials(array $credentials): array
+    {
+        $parameterKeys = array_keys($credentials);
+        $keysNotPresent = [];
+
+        foreach (self::$keysRequired as $keyRequired) {
+            if (! in_array($keyRequired, $parameterKeys)) {
+                $keysNotPresent[] = $keyRequired;
+            }
+        }
+
+        if ($keysNotPresent) {
+            $keysString = implode(',', $keysNotPresent);
+
+            return [
+                'error'   => true,
+                'message' => "The keys [$keysString] must be passed.",
+            ];
+        }
+
+        return [
+            'error'   => false,
+            'message' => null,
         ];
     }
 }
