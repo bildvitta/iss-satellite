@@ -2,7 +2,7 @@
 
 // config for Nave/IssSatellite
 return [
-    'mega' => [
+    'oracle' => [
         'db' => [
             'driver'         => 'oracle',
             'tns'            => env('MS_SATELLITE_MEGA_DB_TNS', ''),

@@ -56,6 +56,16 @@ php artisan vendor:publish --tag="iss-satellite-config"
 ### Mega
 ```php
 // Mega direct DB Connection
+$megaCredentials = [
+    'host' => $credentials['mega_db']['credentials']['MEGA_DB_HOST'],
+    'port' => $credentials['mega_db']['credentials']['MEGA_TUNNEL_LOCAL_PORT'],
+    'database' => $credentials['mega_db']['credentials']['MEGA_DB_DATABASE'],
+    'username' => $credentials['mega_db']['credentials']['MEGA_DB_USERNAME'],
+    'password' => $credentials['mega_db']['credentials']['MEGA_DB_PASSWORD'],
+    'connection_name_prefix' => $credentials['mega_db']['credentials']['CONNECTION_NAME_PREFIX'],
+];
+
+Mega::setConnectionData($megaCredentials);
 $query = Nave\Mega::connection()->select('select * from EXAMPLE');
 
 // Mega specific functions
@@ -71,32 +81,22 @@ $query = Nave\Mega::clientesSac($data);
 ```php
 use Nave\IssSatellite\Facades\Ssh;
 
-// Connect to the default 'mega' connection
-Ssh::connect();
-
-// Or connect to a different connection
-Ssh::connection('my-other-connection')->connect();
+$sshConfig = [
+    'HOST' => '150.47.109.80',
+    'USERNAME' => 'user',
+    'PASSWORD' => 'password',
+    'TUNNEL' => '238.33.98.211',
+    'LOCAL_PORT' => 1521,
+    'DESTINATION_PORT' => 1521,
+];
+// Connect 
+Ssh::connect($sshConfig);
 ```
 
 ### Mega Cloud
 #### Config
 ```php
-'ssh' => [
-    'mega_cloud_bild' => [
-        'tunnel' => env('BILD_MEGA_CLOUD_MEGA_TUNNEL'),
-        'tunnel_local_port' => env('BILD_MEGA_TUNNEL_LOCAL_PORT', 36700),
-        'tunnel_destination_port' => env('BILD_MEGA_TUNNEL_DESTINATION_PORT', 36700),
-    ],
-
-  // Caso exista outra empresa usando o mega cloud através de vpn      
-  'mega_cloud_xxx' => [    
-      'tunnel' => env('XXX_MEGA_CLOUD_MEGA_TUNNEL'),
-      'tunnel_local_port' => env('XXX_MEGA_TUNNEL_LOCAL_PORT', ''),
-      'tunnel_destination_port' => env('XXX_MEGA_TUNNEL_DESTINATION_PORT', ''),
-  ],
-],
-
-'mega_cloud' => [    
+'mega_cloud' => [
       'default_connection' => env('MEGA_CLOUD_DEFAULT_CONNECTION', 'bild'),
       'connect_timeout' => env('MEGA_CLOUD_CONNECTION_TIMEOUT', 120),
       'timeout' => env('MEGA_CLOUD_TIMEOUT', 120),
@@ -124,7 +124,7 @@ Ssh::connection('my-other-connection')->connect();
 use Nave\IssSatellite\Facades\MegaCloud as MegaCloudFacade;
 use Nave\IssSatellite\Facades\Ssh;
 
-Ssh::connection('mega_cloud_bild')->connect();
+Ssh::connect($sshConfig);
 
 // O método setConnection() só será necessário caso queira passar outra conexão, do contrário o padrão será puxado da config iss-satellite.mega_cloud.default_connection
 MegaCloudFacade::setConnection('bild')->getAllRealEstateDevelopmentUnits([
