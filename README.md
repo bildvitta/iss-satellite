@@ -22,12 +22,12 @@ No projeto cliente, adicione o repositório VCS no `composer.json`:
 
 ```json
 {
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "https://github.com/ORG/REPO"
-    }
-  ]
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/ORG/REPO"
+        }
+    ]
 }
 ```
 
@@ -43,75 +43,42 @@ Autenticação local do Composer com token do GitHub:
 composer config -g github-oauth.github.com <YOUR_TOKEN>
 ```
 
-## Package Usage
-### Mega
-```php
-// Mega direct DB Connection
-$megaCredentials = [
-    'host' => $credentials['mega_db']['credentials']['MEGA_DB_HOST'],
-    'port' => $credentials['mega_db']['credentials']['MEGA_TUNNEL_LOCAL_PORT'],
-    'database' => $credentials['mega_db']['credentials']['MEGA_DB_DATABASE'],
-    'username' => $credentials['mega_db']['credentials']['MEGA_DB_USERNAME'],
-    'password' => $credentials['mega_db']['credentials']['MEGA_DB_PASSWORD'],
-    'connection_name_prefix' => $credentials['mega_db']['credentials']['CONNECTION_NAME_PREFIX'],
-];
+No GitHub Actions, configure `COMPOSER_AUTH` antes do `composer install`:
 
-Mega::setConnectionData($megaCredentials);
-$query = Nave\Mega::connection()->select('select * from EXAMPLE');
-
-// Mega specific functions
-$data = [
-    'cto_in_codigo' => 123,
-    'document' => '123.123.123-12',
-    'agn_st_nome' => 'João da Silva',
-]
-$query = Nave\Mega::clientesSac($data);
+```yaml
+env:
+  COMPOSER_AUTH: >-
+    {"github-oauth":{"github.com":"${{ secrets.COMPOSER_GITHUB_TOKEN }}"}}
 ```
 
 ## Instalação local
 
 No projeto cliente:
 
-$sshConfig = [
-    'HOST' => '150.47.109.80',
-    'USERNAME' => 'user',
-    'PASSWORD' => 'password',
-    'TUNNEL' => '238.33.98.211',
-    'LOCAL_PORT' => 1521,
-    'DESTINATION_PORT' => 1521,
-];
-// Connect 
-Ssh::connect($sshConfig);
+1. Adicione o repositório privado no `composer.json`.
+2. Instale o pacote com `composer require bildvitta/iss-satellite`.
+3. Publique a configuração.
+4. Preencha as variáveis de ambiente necessárias.
+
+Publicar configuração:
+
+```bash
+php artisan vendor:publish --tag=iss-satellite-config
 ```
 
-### Mega Cloud
-#### Config
-```php
-'mega_cloud' => [
-      'default_connection' => env('MEGA_CLOUD_DEFAULT_CONNECTION', 'bild'),
-      'connect_timeout' => env('MEGA_CLOUD_CONNECTION_TIMEOUT', 120),
-      'timeout' => env('MEGA_CLOUD_TIMEOUT', 120),
+As chaves disponíveis ficam em `config/iss-satellite.php`. Use apenas as integrações que o projeto realmente precisar.
 
-      'bild' => [
-          'url' => env('BILD_MEGA_CLOUD_URL', 'http://127.0.0.1:36700'),
-          'prefix' => env('BILD_MEGA_CLOUD_URL_PREFIX', '/api'),
-          'username' => env('BILD_MEGA_CLOUD_USERNAME', ''),
-          'password' => env('BILD_MEGA_CLOUD_PASSWORD', ''),
-          'cache_key' => env('BILD_MEGA_CLOUD_CACHE_KEY', 'bildIssMegaCloudToken'),
-      ],
-      
-      // Configuração adicional para outra empresa usando mega cloud
-      'xxx' => [
-          'url' => env('XXX_MEGA_CLOUD_URL', '127.0.0.1'),
-          'prefix' => env('XXX_MEGA_CLOUD_URL_PREFIX', '/api'),
-          'username' => env('XXX_MEGA_CLOUD_USERNAME', ''),
-          'password' => env('XXX_MEGA_CLOUD_PASSWORD', ''),
-          'cache_key' => env('XXX_MEGA_CLOUD_CACHE_KEY', 'terreIssMegaCloudToken'),
-      ],
-],
+## Comandos úteis
+
+```bash
+php artisan vendor:publish --tag=iss-satellite-config
+composer analyse
+composer test
+composer test-coverage
+composer format
 ```
 
-Ssh::connect($sshConfig);
+## Convenções do projeto
 
 Classes públicas disponíveis:
 
@@ -127,7 +94,7 @@ use Nave\IssSatellite\Multidados;
 - `Mega` usa a conexão Oracle configurada em `iss-satellite.mega.db`
 - `MegaCloud` usa `default_connection` e autentica por token
 - `Ssh` abre túnel SSH para conexões configuradas
-- `Finnet`, `WsCarteira` e `Multidados` dependem de configuração válida no `.env`
+- `Finnet`, `WsCarteira` e `Multidados` dependem de credenciais que vem do hub
 
 ## Uso básico
 
@@ -135,10 +102,27 @@ use Nave\IssSatellite\Multidados;
 use Nave\IssSatellite\Mega;
 use Nave\IssSatellite\Facades\MegaCloud;
 use Nave\IssSatellite\Facades\Ssh;
+$megaCredentials = [
+    'host' => $credentials['mega_db']['credentials']['MEGA_DB_HOST'],
+    'port' => $credentials['mega_db']['credentials']['MEGA_TUNNEL_LOCAL_PORT'],
+    'database' => $credentials['mega_db']['credentials']['MEGA_DB_DATABASE'],
+    'username' => $credentials['mega_db']['credentials']['MEGA_DB_USERNAME'],
+    'password' => $credentials['mega_db']['credentials']['MEGA_DB_PASSWORD'],
+    'connection_name_prefix' => $credentials['mega_db']['credentials']['CONNECTION_NAME_PREFIX'],
+];
 
+Mega::setConnectionData($megaCredentials);
 $rows = Mega::connection()->select('select * from EXAMPLE');
 
-Ssh::connection('mega')->connect();
+$sshConfig = [
+    'HOST' => '150.47.109.80',
+    'USERNAME' => 'user',
+    'PASSWORD' => 'password',
+    'TUNNEL' => '238.33.98.211',
+    'LOCAL_PORT' => 1521,
+    'DESTINATION_PORT' => 1521,
+];
+Ssh::connect($sshConfig);
 
 $response = MegaCloud::setConnection('bild')->get('/globalestruturas/Empreendimentos');
 ```
