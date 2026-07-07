@@ -25,7 +25,7 @@ class Multidados
             'exceptions' => 1,
             'stream_context' => stream_context_create([
                 'ssl' => [
-                    'verify_peer' => false,
+                    'verify_peer'      => false,
                     'verify_peer_name' => false,
                 ],
             ]),
@@ -42,7 +42,7 @@ class Multidados
 
         if ($result->erros ?? false) {
             return [
-                'error' => true,
+                'error'   => true,
                 'message' => $result->erros ?? 'No key erros from Multidados',
             ];
         }
@@ -50,13 +50,13 @@ class Multidados
         $success = $result->success ?? false;
         if ($success === true) {
             return [
-                'error' => false,
+                'error'   => false,
                 'message' => $result->idocorrencia,
             ];
         }
 
         return [
-            'error' => true,
+            'error'   => true,
             'message' => $soapCall,
         ];
     }

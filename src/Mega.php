@@ -888,8 +888,8 @@ class Mega
         ?int $numParcela = null,
         bool $exibeJsonpar = false,
         bool $exibeBoletoBase64 = false,
-        bool $statusGreaterThanZero = false): SupportCollection
-    {
+        bool $statusGreaterThanZero = false
+    ): SupportCollection {
         /*
          * 00 - Aguardando Json
          * 10 - Processado
@@ -952,10 +952,10 @@ class Mega
         self::connection()
             ->table('bild.ALX_CLIINTPROPOSTATERMO')
             ->insert([
-                'PROP_CLIENTE' => $cpfCliente,
-                'EST_IN_CODIGO' => $codUnidade,
-                'PROP_IN_PROP' => $codProposta,
-                'TER_IN_CODIGO' => $codTermo,
+                'PROP_CLIENTE'   => $cpfCliente,
+                'EST_IN_CODIGO'  => $codUnidade,
+                'PROP_IN_PROP'   => $codProposta,
+                'TER_IN_CODIGO'  => $codTermo,
                 'PROP_CH_STATUS' => $status,
                 'PROP_DT_IMPORT' => now()->toDateTimeString(),
                 'PROP_DT_PROCES' => now()->toDateTimeString(),
@@ -1000,17 +1000,17 @@ class Mega
         self::connection()
             ->table('bild.ALX_CLIINTPROPTERMOPARC')
             ->insert([
-                'PROP_CLIENTE' => $cpfCliente,
-                'EST_IN_CODIGO' => $codUnidade,
-                'PROP_IN_PARC' => $numeroParcela,
-                'PROP_IN_PROP' => $codProposta,
-                'PROP_CH_PARC' => $tipoParcela,
-                'PROP_DT_VENCTO' => DB::raw("TO_DATE('$dataVencimento', 'DD/MM/YYYY')"),
-                'PROP_RE_VALOR' => $valor,
-                'PROP_CH_STATUS' => $status,
+                'PROP_CLIENTE'       => $cpfCliente,
+                'EST_IN_CODIGO'      => $codUnidade,
+                'PROP_IN_PARC'       => $numeroParcela,
+                'PROP_IN_PROP'       => $codProposta,
+                'PROP_CH_PARC'       => $tipoParcela,
+                'PROP_DT_VENCTO'     => DB::raw("TO_DATE('$dataVencimento', 'DD/MM/YYYY')"),
+                'PROP_RE_VALOR'      => $valor,
+                'PROP_CH_STATUS'     => $status,
                 'PROP_ST_OBSERVACAO' => '',
-                'PROP_IN_PERC' => $porcentagem,
-                'PROP_DT_IMPORT' => DB::raw("TO_DATE('$dataImporta', 'YYYY-MM-DD HH24:MI:SS')"),
+                'PROP_IN_PERC'       => $porcentagem,
+                'PROP_DT_IMPORT'     => DB::raw("TO_DATE('$dataImporta', 'YYYY-MM-DD HH24:MI:SS')"),
             ]);
     }
 
@@ -1068,17 +1068,17 @@ class Mega
         self::connection()
             ->table('bild.ALX_CLIINTPROPTERCOR')
             ->insert([
-                'PROP_CLIENTE' => $cpfCliente,
-                'EST_IN_CODIGO' => $codUnidade,
-                'PROP_IN_PROP' => $codProposta,
-                'PROP_IN_PARC' => $numeroParcela,
+                'PROP_CLIENTE'   => $cpfCliente,
+                'EST_IN_CODIGO'  => $codUnidade,
+                'PROP_IN_PROP'   => $codProposta,
+                'PROP_IN_PARC'   => $numeroParcela,
                 'PROP_IN_INDICE' => $indice,
-                'PROP_DT_VIGEN' => DB::raw("TO_DATE('$dataVigencia', 'DD/MM/YYYY')"),
-                'PROP_IN_DEFAS' => $defasagem,
-                'PROP_CH_JUROS' => $reajuste,
-                'PROP_RE_JUROS' => $juros,
-                'PROP_CH_TPJUR' => $tipoJuro,
-                'PROP_CH_VINC' => $vincula,
+                'PROP_DT_VIGEN'  => DB::raw("TO_DATE('$dataVigencia', 'DD/MM/YYYY')"),
+                'PROP_IN_DEFAS'  => $defasagem,
+                'PROP_CH_JUROS'  => $reajuste,
+                'PROP_RE_JUROS'  => $juros,
+                'PROP_CH_TPJUR'  => $tipoJuro,
+                'PROP_CH_VINC'   => $vincula,
                 'PROP_DT_IMPORT' => DB::raw("TO_DATE('$dataImporta', 'YYYY-MM-DD HH24:MI:SS')"),
             ]);
     }
@@ -1136,8 +1136,8 @@ class Mega
             ->table('bild.ALX_CLIINTEGRACAOSYS')
             ->insert([
                 'INT_IN_CODIGO' => $codigoMega,
-                'INT_DT_DATA' => DB::raw("TO_DATE('$dataIntegracao', 'DD/MM/YYYY HH24:MI:SS')"),
-                'INT_IN_DOCTO' => $codProposta,
+                'INT_DT_DATA'   => DB::raw("TO_DATE('$dataIntegracao', 'DD/MM/YYYY HH24:MI:SS')"),
+                'INT_IN_DOCTO'  => $codProposta,
             ]);
     }
 
@@ -1287,20 +1287,20 @@ class Mega
         string $vencimento,
         float $valor,
         int $numeroParcela,
-        float $vgvPraticado): void
-    {
+        float $vgvPraticado
+    ): void {
         self::connection()
             ->table('bild.CLI_PROPOSTA_SYS')
             ->insert([
-                'PROP_IN_CODIGO' => $idVenda,
-                'DOCUMENTO' => $documento,
-                'EST_IN_CODIGO' => $codigoExportaUnidade,
-                'PROP_VENCTO' => DB::raw("TO_DATE('$vencimento', 'DD/MM/YYYY')"),
-                'VLR_PARCELA' => $valor,
-                'PROP_IN_PARCELA' => $numeroParcela,
-                'PROP_RE_VALOR' => $vgvPraticado,
+                'PROP_IN_CODIGO'   => $idVenda,
+                'DOCUMENTO'        => $documento,
+                'EST_IN_CODIGO'    => $codigoExportaUnidade,
+                'PROP_VENCTO'      => DB::raw("TO_DATE('$vencimento', 'DD/MM/YYYY')"),
+                'VLR_PARCELA'      => $valor,
+                'PROP_IN_PARCELA'  => $numeroParcela,
+                'PROP_RE_VALOR'    => $vgvPraticado,
                 'PROP_RE_TT_SINAL' => $valor,
-                'VLR_PRESTAMISTA' => null,
+                'VLR_PRESTAMISTA'  => null,
             ]);
     }
 
@@ -1328,11 +1328,11 @@ class Mega
         return self::connection()
             ->table('bild.CLI_PROPOSTA_SYS')
             ->insert([
-                'PROP_IN_CODIGO' => $parcela->prop_in_codigo,
-                'DOCUMENTO' => $parcela->documento,
-                'EST_IN_CODIGO' => $parcela->est_in_codigo,
-                'PROP_VENCTO' => $vencimento,
-                'VLR_PARCELA' => $parcela->vlr_parcela,
+                'PROP_IN_CODIGO'  => $parcela->prop_in_codigo,
+                'DOCUMENTO'       => $parcela->documento,
+                'EST_IN_CODIGO'   => $parcela->est_in_codigo,
+                'PROP_VENCTO'     => $vencimento,
+                'VLR_PARCELA'     => $parcela->vlr_parcela,
                 'PROP_IN_PARCELA' => $parcela->prop_in_parcela,
             ]);
     }
@@ -1387,8 +1387,8 @@ class Mega
         string $arquivoBase64,
         string $mensagem,
         string $status,
-        array $pix = []): void
-    {
+        array $pix = []
+    ): void {
         $lengthSize = 30_000;
         $arquivoBase64_1 = substr($arquivoBase64, 0, $lengthSize);
         $arquivoBase64_2 = substr($arquivoBase64, 30_000, $lengthSize);
@@ -1575,9 +1575,9 @@ class Mega
         self::connection()
             ->table('bild.cli_log_wscarteira')
             ->insert([
-                'prop_in_codigo' => $codProposta,
-                'documento' => $documento,
-                'payload' => $sqlQueryLog,
+                'prop_in_codigo'   => $codProposta,
+                'documento'        => $documento,
+                'payload'          => $sqlQueryLog,
                 'dt_processamento' => now('America/Sao_Paulo')->toDateTimeString(),
             ]);
     }

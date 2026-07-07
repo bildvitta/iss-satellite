@@ -1,55 +1,46 @@
-# iss-satellite
+# bildvitta/iss-satellite
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/bildvitta/iss-satellite.svg?style=flat-square)](https://packagist.org/packages/bildvitta/iss-satellite)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/bildvitta/iss-satellite/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/bildvitta/iss-satellite/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/bildvitta/iss-satellite/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/bildvitta/iss-satellite/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/bildvitta/iss-satellite.svg?style=flat-square)](https://packagist.org/packages/bildvitta/iss-satellite)
+Pacote privado da Nave para integrações Laravel com Mega, Mega Cloud, WSCarteira, Finnet, Multidados e SSH.
 
-This package allows Nave Servers to connect with this external services:
-- Mega
-- WSCarteira
-- Finnet
-- SSH
+## Visão geral
 
-## Requirement: Oracle Instant Client + OCI8 PHP extension
-This package requires Oracle Instant Client oci8 PHP extension installed on your server for Mega operations
-### php:8.X-fpm Dockerfile
-```Dockerfile
-ENV ORACLE_HOME=/opt/oracle/instantclient_21_13
-ENV LD_LIBRARY_PATH=$ORACLE_HOME
-ENV PATH=$ORACLE_HOME:$PATH
-RUN mkdir -p /opt/oracle && \
-    cd /opt/oracle && \
-    wget https://download.oracle.com/otn_software/linux/instantclient/2113000/instantclient-basic-linux.x64-21.13.0.0.0dbru.zip && \
-    wget https://download.oracle.com/otn_software/linux/instantclient/2113000/instantclient-sdk-linux.x64-21.13.0.0.0dbru.zip && \
-    unzip instantclient-basic-linux.x64-21.13.0.0.0dbru.zip && \
-    unzip instantclient-sdk-linux.x64-21.13.0.0.0dbru.zip && \
-    echo "$ORACLE_HOME" > /etc/ld.so.conf.d/oracle-instantclient.conf && \
-    ldconfig
-RUN docker-php-ext-configure oci8 --with-oci8=instantclient,$ORACLE_HOME && \
-    docker-php-ext-install oci8
+- Nome do pacote: `bildvitta/iss-satellite`
+- Namespace principal: `Nave\IssSatellite`
+- Publica apenas configuração, sem rotas, views ou migrations por padrão
+
+## Requisitos
+
+- PHP `^8.3`
+- Laravel `10`, `11` ou `12`
+- `ext-oci8` e Oracle Instant Client para uso do `Mega`
+- `ext-soap` para `WsCarteira` e `Multidados`
+- Credenciais e endpoints configurados no `.env`
+
+## Acesso a repositórios privados
+
+No projeto cliente, adicione o repositório VCS no `composer.json`:
+
+```json
+{
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/ORG/REPO"
+    }
+  ]
+}
 ```
 
-## Requirement: Soap PHP extension
-This package requires Soap PHP extension installed on your server for WSCarteira operations
-### php:8.X-fpm Dockerfile
-```Dockerfile
-RUN apt-get update && apt-get install -y libxml2-dev \
-    && docker-php-ext-install soap
-```
-
-## Package Installation
-
-You can install the package via composer:
+Depois instale o pacote:
 
 ```bash
 composer require bildvitta/iss-satellite
 ```
 
-You can publish the config file with:
+Autenticação local do Composer com token do GitHub:
 
 ```bash
-php artisan vendor:publish --tag="iss-satellite-config"
+composer config -g github-oauth.github.com <YOUR_TOKEN>
 ```
 
 ## Package Usage
@@ -77,9 +68,9 @@ $data = [
 $query = Nave\Mega::clientesSac($data);
 ```
 
-### Ssh
-```php
-use Nave\IssSatellite\Facades\Ssh;
+## Instalação local
+
+No projeto cliente:
 
 $sshConfig = [
     'HOST' => '150.47.109.80',
@@ -119,30 +110,40 @@ Ssh::connect($sshConfig);
       ],
 ],
 ```
-#### How to use
-```php
-use Nave\IssSatellite\Facades\MegaCloud as MegaCloudFacade;
-use Nave\IssSatellite\Facades\Ssh;
 
 Ssh::connect($sshConfig);
 
-// O método setConnection() só será necessário caso queira passar outra conexão, do contrário o padrão será puxado da config iss-satellite.mega_cloud.default_connection
-MegaCloudFacade::setConnection('bild')->getAllRealEstateDevelopmentUnits([
-        'filial' => 103442,
-    ])
-        ->where('status', 'VENDIDA')
-        ->values();
+Classes públicas disponíveis:
+
+```php
+use Nave\IssSatellite\Mega;
+use Nave\IssSatellite\MegaCloud;
+use Nave\IssSatellite\Ssh;
+use Nave\IssSatellite\Finnet;
+use Nave\IssSatellite\WsCarteira;
+use Nave\IssSatellite\Multidados;
 ```
 
-## Changelog
+- `Mega` usa a conexão Oracle configurada em `iss-satellite.mega.db`
+- `MegaCloud` usa `default_connection` e autentica por token
+- `Ssh` abre túnel SSH para conexões configuradas
+- `Finnet`, `WsCarteira` e `Multidados` dependem de configuração válida no `.env`
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+## Uso básico
 
-## Credits
+```php
+use Nave\IssSatellite\Mega;
+use Nave\IssSatellite\Facades\MegaCloud;
+use Nave\IssSatellite\Facades\Ssh;
 
-- [Nave](https://github.com/bildvitta)
-- [All Contributors](../../contributors)
+$rows = Mega::connection()->select('select * from EXAMPLE');
 
-## License
+Ssh::connection('mega')->connect();
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+$response = MegaCloud::setConnection('bild')->get('/globalestruturas/Empreendimentos');
+```
+
+## Informações adicionais
+
+- Consulte `CHANGELOG.md` para histórico de mudanças
+- Licença: MIT
