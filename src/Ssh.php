@@ -79,16 +79,30 @@ class Ssh
     {
         $parameterKeys = array_keys($sshConfig);
         $keysNotPresent = [];
+        $keysWithoutValues = [];
 
         foreach ($this->keysRequired as $keyRequired) {
             if (! in_array($keyRequired, $parameterKeys)) {
                 $keysNotPresent[] = $keyRequired;
+
+                continue;
+            }
+
+            if ($sshConfig[$keyRequired] === null) {
+                $keysWithoutValues[] = $keyRequired;
             }
         }
 
         if ($keysNotPresent) {
             $keysString = implode(',', $keysNotPresent);
             $this->log()->error("The keys [$keysString] must be passed.");
+
+            return false;
+        }
+
+        if ($keysWithoutValues) {
+            $keysString = implode(',', $keysWithoutValues);
+            $this->log()->error("The keys [$keysString] must have values.");
 
             return false;
         }
