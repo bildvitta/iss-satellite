@@ -1147,6 +1147,7 @@ class Mega
             ->table('bild.car_contrato as cto')
             ->select([
                 'cto.cto_in_codigo as CONTRATO',
+                'cto.org_in_codigo',
                 DB::raw("CASE cli.agn_ch_tipopessoafj WHEN 'J' THEN cli.agn_st_cgc ELSE fis.agn_st_cpf END as CPF_CNPJ"),
                 DB::raw(
                     "CASE cto.cto_ch_status
