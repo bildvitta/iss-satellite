@@ -407,7 +407,7 @@ class WsCarteira
      */
     public static function processAddress(
         string $address,
-        int $number,
+        string|int $number,
         ?string $complement,
         string $neighborhood,
         string $city,
