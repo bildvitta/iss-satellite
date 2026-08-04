@@ -9,64 +9,56 @@ use Psr\Log\LoggerInterface;
 
 class Ssh
 {
-    private ?string $connectionName = null;
-
-    private array $sshTunnelConfig;
-
-    public function connection(string $connectionName): self
-    {
-        $this->connectionName = $connectionName;
-
-        return $this;
-    }
+    private array $keysRequired = [
+        'HOST',
+        'USERNAME',
+        'PASSWORD',
+        'TUNNEL',
+        'LOCAL_PORT',
+        'DESTINATION_PORT',
+    ];
 
     /**
      * @throws Exception
      */
-    public function connect(bool $debug = false): void
+    public function connect(array $sshConfig, bool $debug = false): void
     {
-        $sshConfig = config('iss-satellite.ssh');
-
-        if (! $this->connectionName) {
-            $this->getDefaultConnection();
-        }
-
-        $this->sshTunnelConfig = $sshConfig[$this->connectionName];
-
-        if (! $sshConfig['host']) {
-            $this->log()->error('No host for SSH was provided.');
+        if (! $this->validateParameters($sshConfig)) {
+            $this->log()->error('Invalid SSH configuration');
 
             return;
         }
 
         $sshString = [
-            'sshpass -p '.$sshConfig['password'],
+            "sshpass -p {$sshConfig['PASSWORD']}",
             'ssh -o "StrictHostKeyChecking no" -f -N -L',
-            $this->sshTunnelConfig['tunnel_local_port'].':'.$this->sshTunnelConfig['tunnel'].':'.$this->sshTunnelConfig['tunnel_destination_port'],
-            $sshConfig['username'].'@'.$sshConfig['host'],
+            "{$sshConfig['LOCAL_PORT']}:{$sshConfig['TUNNEL']}:{$sshConfig['DESTINATION_PORT']}",
+            "{$sshConfig['USERNAME']}@{$sshConfig['HOST']}",
         ];
 
-        $this->log()->info('Testing SSH connection to: '.$this->connectionName);
+        $info = "ip: {$sshConfig['TUNNEL']} | local port: {$sshConfig['LOCAL_PORT']} | destination_port: {$sshConfig['DESTINATION_PORT']}";
 
-        $isConnected = $this->isConnected($debug);
+        $this->log()->info("Testing SSH connection to: $info");
+
+        $isConnected = $this->isConnected($sshConfig['LOCAL_PORT'], $debug);
 
         if (! $isConnected) {
-            $this->log()->info('Establishing SSH connection to: '.$this->connectionName);
+            $this->log()->info("Establishing SSH connection to: $info");
 
             Process::run(implode(' ', $sshString))->output();
 
-            $this->log()->info('SSH connection established to: '.$this->connectionName);
+            $this->log()->info("SSH connection established to: $info");
         }
 
         if ($isConnected) {
-            $this->log()->info('SSH is already connected to: '.$this->connectionName);
+            $this->log()->info("SSH is already connected to: $info");
         }
     }
 
-    private function isConnected(bool $debug): bool
+    private function isConnected(int $localPort, bool $debug): bool
     {
         try {
-            fsockopen('tcp://localhost', $this->sshTunnelConfig['tunnel_local_port']);
+            fsockopen('tcp://localhost', $localPort);
 
             return true;
         } catch (Exception $exception) {
@@ -78,15 +70,43 @@ class Ssh
         return false;
     }
 
-    private function getDefaultConnection(): void
-    {
-        $sshDefaultConnection = config('iss-satellite.ssh.default_connection');
-
-        $this->connectionName = $sshDefaultConnection;
-    }
-
     public function log(): LoggerInterface
     {
         return Log::channel('stderr');
+    }
+
+    private function validateParameters(array $sshConfig): bool
+    {
+        $parameterKeys = array_keys($sshConfig);
+        $keysNotPresent = [];
+        $keysWithoutValues = [];
+
+        foreach ($this->keysRequired as $keyRequired) {
+            if (! in_array($keyRequired, $parameterKeys)) {
+                $keysNotPresent[] = $keyRequired;
+
+                continue;
+            }
+
+            if ($sshConfig[$keyRequired] === null) {
+                $keysWithoutValues[] = $keyRequired;
+            }
+        }
+
+        if ($keysNotPresent) {
+            $keysString = implode(',', $keysNotPresent);
+            $this->log()->error("The keys [$keysString] must be passed.");
+
+            return false;
+        }
+
+        if ($keysWithoutValues) {
+            $keysString = implode(',', $keysWithoutValues);
+            $this->log()->error("The keys [$keysString] must have values.");
+
+            return false;
+        }
+
+        return true;
     }
 }

@@ -22,12 +22,12 @@ No projeto cliente, adicione o repositório VCS no `composer.json`:
 
 ```json
 {
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "https://github.com/ORG/REPO"
-    }
-  ]
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/ORG/REPO"
+        }
+    ]
 }
 ```
 
@@ -68,14 +68,6 @@ php artisan vendor:publish --tag=iss-satellite-config
 
 As chaves disponíveis ficam em `config/iss-satellite.php`. Use apenas as integrações que o projeto realmente precisar.
 
-Variáveis mais usadas:
-
-- Mega: `MS_SATELLITE_MEGA_DB_*`
-- WSCarteira: `MS_SATELLITE_WSCARTEIRA_*`
-- Finnet: `MS_SATELLITE_FINNET_URL` e `MS_SATELLITE_FINNET_URL_QRCODE`
-- Multidados: `MS_SATELLITE_MULTDADDOS_*`
-- SSH e Mega Cloud: `SSH_*`, `MEGA_TUNNEL*`, `BILD_MEGA_CLOUD_*` e `MEGA_CLOUD_*`
-
 ## Comandos úteis
 
 ```bash
@@ -102,7 +94,7 @@ use Nave\IssSatellite\Multidados;
 - `Mega` usa a conexão Oracle configurada em `iss-satellite.mega.db`
 - `MegaCloud` usa `default_connection` e autentica por token
 - `Ssh` abre túnel SSH para conexões configuradas
-- `Finnet`, `WsCarteira` e `Multidados` dependem de configuração válida no `.env`
+- `Finnet`, `WsCarteira` e `Multidados` dependem de credenciais que vem do hub
 
 ## Uso básico
 
@@ -110,10 +102,27 @@ use Nave\IssSatellite\Multidados;
 use Nave\IssSatellite\Mega;
 use Nave\IssSatellite\Facades\MegaCloud;
 use Nave\IssSatellite\Facades\Ssh;
+$megaCredentials = [
+    'host' => $credentials['mega_db']['credentials']['MEGA_DB_HOST'],
+    'port' => $credentials['mega_db']['credentials']['MEGA_TUNNEL_LOCAL_PORT'],
+    'database' => $credentials['mega_db']['credentials']['MEGA_DB_DATABASE'],
+    'username' => $credentials['mega_db']['credentials']['MEGA_DB_USERNAME'],
+    'password' => $credentials['mega_db']['credentials']['MEGA_DB_PASSWORD'],
+    'connection_name_prefix' => $credentials['mega_db']['credentials']['CONNECTION_NAME_PREFIX'],
+];
 
+Mega::setConnectionData($megaCredentials);
 $rows = Mega::connection()->select('select * from EXAMPLE');
 
-Ssh::connection('mega')->connect();
+$sshConfig = [
+    'HOST' => '150.47.109.80',
+    'USERNAME' => 'user',
+    'PASSWORD' => 'password',
+    'TUNNEL' => '238.33.98.211',
+    'LOCAL_PORT' => 1521,
+    'DESTINATION_PORT' => 1521,
+];
+Ssh::connect($sshConfig);
 
 $response = MegaCloud::setConnection('bild')->get('/globalestruturas/Empreendimentos');
 ```

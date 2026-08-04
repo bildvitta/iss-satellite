@@ -6,12 +6,18 @@ use SoapClient;
 
 class WsCarteira
 {
+    private static array $keysRequired = [
+        'WSDL',
+        'LOGIN',
+        'PASSWORD',
+    ];
+
     /**
      * NÃO IMPLEMENTADOS
      * endereco() - Depende de uma classe de cliente específica de la
      * abreviarBairro() - Não vi sentido, parece igual ao abreviarEndereco()
      * siglaPais() - Utiliza dados de países do banco local, talvez de para utilizar o laravel countries do proprio módulo
-     * estruturaParcelaVazia() - Faz mais sentido essa estrutura ser feita no próprio módulo pois as parcelas não vazias já serão montadas la
+     * estruturaParcelaVazia() - Faz mais sentido essa estrutura ser feita no próprio módulo, pois as parcelas não vazias já serão montadas la
      */
 
     /**
@@ -19,16 +25,14 @@ class WsCarteira
      * Faz uma chamada no SoapServer do WS Carteira.
      * Não é necessário passar o login e senha, pois eles são passados automaticamente.
      */
-    public static function call(string $call, array $data = []): array
+    public static function call(array $credentials, string $call, array $data = []): array
     {
-        if (! config('iss-satellite.wscarteira.wsdl')) {
-            return [
-                'error'   => true,
-                'message' => 'WSCarteira WSDL config not found',
-            ];
+        $validateCredentials = self::validateCredentials($credentials);
+        if ($validateCredentials['error'] === true) {
+            return $validateCredentials;
         }
 
-        $soapClient = new SoapClient(config('iss-satellite.wscarteira.wsdl'), [
+        $soapClient = new SoapClient($credentials['WSDL'], [
             'encoding'       => 'UTF-8',
             'trace'          => 1,
             'exceptions'     => 1,
@@ -42,8 +46,8 @@ class WsCarteira
         ]);
 
         $data = array_merge([
-            'Login' => config('iss-satellite.wscarteira.login'),
-            'Senha' => config('iss-satellite.wscarteira.password'),
+            'Login' => $credentials['LOGIN'],
+            'Senha' => $credentials['PASSWORD'],
         ], $data);
 
         $result = $soapClient->__soapCall($call, [$data]);
@@ -76,6 +80,32 @@ class WsCarteira
         return [
             'error'   => true,
             'message' => 'Unknown error',
+        ];
+    }
+
+    private static function validateCredentials(array $credentials): array
+    {
+        $parameterKeys = array_keys($credentials);
+        $keysNotPresent = [];
+
+        foreach (self::$keysRequired as $keyRequired) {
+            if (! in_array($keyRequired, $parameterKeys)) {
+                $keysNotPresent[] = $keyRequired;
+            }
+        }
+
+        if ($keysNotPresent) {
+            $keysString = implode(',', $keysNotPresent);
+
+            return [
+                'error'   => true,
+                'message' => "The keys [$keysString] must be passed.",
+            ];
+        }
+
+        return [
+            'error'   => false,
+            'message' => null,
         ];
     }
 
@@ -377,7 +407,7 @@ class WsCarteira
      */
     public static function processAddress(
         string $address,
-        int $number,
+        string|int $number,
         ?string $complement,
         string $neighborhood,
         string $city,

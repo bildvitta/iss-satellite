@@ -13,6 +13,10 @@ use Yajra\Oci8\Query\OracleBuilder;
 
 class Mega
 {
+    private static array $connectionData;
+
+    private static string $connectionName;
+
     /**
      * NÃO IMPLEMENTADOS
      * getVizinhosByCodUnidade() - Não é Mega, manipula dados do banco do SYS
@@ -22,10 +26,26 @@ class Mega
      * insertTelefones() - Utiliza ORM rudimentar do Mega que fizeram, ver se vai importar
      * sincronizaPermutantes() - Rotina de buscar no Mega por permutantes e inserir no SYS. Utiliza uma query Mega no início mas o restante é SYS
      */
+    public static function setConnectionData(array $connectionData): void
+    {
+        self::$connectionName = "iss-satellite-{$connectionData['connection_name_prefix']}";
+        self::$connectionData = [
+            'host' => $connectionData['host'],
+            'port' => $connectionData['port'],
+            'database' => $connectionData['database'],
+            'service_name' => $connectionData['database'],
+            'username' => $connectionData['username'],
+            'password' => $connectionData['password'],
+        ];
+    }
+
     protected static function connectionConfig(): void
     {
         config([
-            'database.connections.iss-satellite-mega' => config('iss-satellite.mega.db'),
+            'database.connections.'.self::$connectionName => array_merge(
+                config('iss-satellite.oracle.db'),
+                self::$connectionData
+            ),
         ]);
     }
 
@@ -33,7 +53,9 @@ class Mega
     {
         self::connectionConfig();
 
-        return DB::connection('iss-satellite-mega');
+        DB::purge(self::$connectionName);
+
+        return DB::connection(self::$connectionName);
     }
 
     /**
@@ -1125,6 +1147,7 @@ class Mega
             ->table('bild.car_contrato as cto')
             ->select([
                 'cto.cto_in_codigo as CONTRATO',
+                'cto.org_in_codigo',
                 DB::raw("CASE cli.agn_ch_tipopessoafj WHEN 'J' THEN cli.agn_st_cgc ELSE fis.agn_st_cpf END as CPF_CNPJ"),
                 DB::raw(
                     "CASE cto.cto_ch_status
